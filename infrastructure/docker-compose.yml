@@ -5,13 +5,13 @@ services:
   # ---------------------------------------------------------
   backend:
     build:
-      context: ../../
-      dockerfile: infrastructure/docker/php-fpm/Dockerfile
+      context: ../ # Контекст
+      dockerfile: infrastructure/docker/php-fpm/Dockerfile # Путь от корня
     container_name: store_backend
     working_dir: /var/www/backend
     volumes:
-      - ../../backend:/var/www/backend
-      - ./php-fpm/php.ini:/usr/local/etc/php/php.ini
+      - ../backend:/var/www/backend
+      - ./docker/php-fpm/php.ini:/usr/local/etc/php/php.ini # Исправленный путь к php.ini
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
@@ -31,12 +31,12 @@ services:
   # ---------------------------------------------------------
   frontend:
     build:
-      context: ../../
-      dockerfile: infrastructure/docker/node/Dockerfile
+      context: ../ # Контекст
+      dockerfile: infrastructure/docker/node/Dockerfile # Путь от корня
     container_name: store_frontend
     working_dir: /var/www/frontend
     volumes:
-      - ../../frontend:/var/www/frontend
+      - ../frontend:/var/www/frontend
     ports:
       - "5173:5173"
     environment:
@@ -50,8 +50,8 @@ services:
   # ---------------------------------------------------------
   nginx:
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./docker/nginx # <-- ИСПРАВЛЕНО: Указывает на папку NGINX Dockerfile
+      dockerfile: Dockerfile  # <-- Ищет Dockerfile внутри этого контекста
     container_name: store_nginx
     ports:
       - "80:80"
@@ -59,8 +59,8 @@ services:
     volumes:
       - ../backend:/var/www/backend
       - ../frontend/dist:/var/www/frontend/dist
-      - ./conf.d:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/certs
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d # ИСПРАВЛЕНО: Добавлен путь 'docker/nginx/'
+      - ./docker/nginx/certs:/etc/nginx/certs # ИСПРАВЛЕНО: Добавлен путь 'docker/nginx/'
     depends_on:
       - backend
       - frontend

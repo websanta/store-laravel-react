@@ -1,5 +1,3 @@
-version: "1.0"
-
 services:
 
   # ---------------------------------------------------------
@@ -7,13 +5,13 @@ services:
   # ---------------------------------------------------------
   backend:
     build:
-      context: ../
+      context: ../../
       dockerfile: infrastructure/docker/php-fpm/Dockerfile
     container_name: store_backend
     working_dir: /var/www/backend
     volumes:
-      - ../backend:/var/www/backend
-      - ./docker/php-fpm/php.ini:/usr/local/etc/php/php.ini
+      - ../../backend:/var/www/backend
+      - ./php-fpm/php.ini:/usr/local/etc/php/php.ini
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
@@ -33,12 +31,12 @@ services:
   # ---------------------------------------------------------
   frontend:
     build:
-      context: ../
+      context: ../../
       dockerfile: infrastructure/docker/node/Dockerfile
     container_name: store_frontend
     working_dir: /var/www/frontend
     volumes:
-      - ../frontend:/var/www/frontend
+      - ../../frontend:/var/www/frontend
     ports:
       - "5173:5173"
     environment:
@@ -52,7 +50,8 @@ services:
   # ---------------------------------------------------------
   nginx:
     build:
-      context: ./docker/nginx
+      context: .
+      dockerfile: ./Dockerfile
     container_name: store_nginx
     ports:
       - "80:80"
@@ -60,8 +59,8 @@ services:
     volumes:
       - ../backend:/var/www/backend
       - ../frontend/dist:/var/www/frontend/dist
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d
-      - ./docker/nginx/certs:/etc/nginx/certs
+      - ./conf.d:/etc/nginx/conf.d
+      - ./certs:/etc/nginx/certs
     depends_on:
       - backend
       - frontend

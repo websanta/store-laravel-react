@@ -1,0 +1,131 @@
+version: "1.0"
+
+services:
+
+  # ---------------------------------------------------------
+  # BACKEND – PHP-FPM (Laravel)
+  # ---------------------------------------------------------
+  backend:
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/php-fpm/Dockerfile
+    container_name: store_backend
+    working_dir: /var/www/backend
+    volumes:
+      - ../backend:/var/www/backend
+      - ./docker/php-fpm/php.ini:/usr/local/etc/php/php.ini
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: store_db
+      DB_USERNAME: store_user
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+    depends_on:
+      - postgres
+      - redis
+
+  # ---------------------------------------------------------
+  # FRONTEND – Node (Vite dev server)
+  # ---------------------------------------------------------
+  frontend:
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/node/Dockerfile
+    container_name: store_frontend
+    working_dir: /var/www/frontend
+    volumes:
+      - ../frontend:/var/www/frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BACKEND_URL: https://vmmint22.local/api
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - backend
+
+  # ---------------------------------------------------------
+  # NGINX – acts as reverse proxy for backend + builds in prod
+  # ---------------------------------------------------------
+  nginx:
+    build:
+      context: ./docker/nginx
+    container_name: store_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../backend:/var/www/backend
+      - ../frontend/dist:/var/www/frontend/dist
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/nginx/certs:/etc/nginx/certs
+    depends_on:
+      - backend
+      - frontend
+    extra_hosts:
+      - "vmmint22.local:127.0.0.1"
+
+  # ---------------------------------------------------------
+  # DATABASE: Postgres
+  # ---------------------------------------------------------
+  postgres:
+    image: postgres:16
+    container_name: store_postgres
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: store_db
+      POSTGRES_USER: store_user
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+
+  # ---------------------------------------------------------
+  # PGADMIN (Database Web UI)
+  # ---------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: store_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8081:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  # ---------------------------------------------------------
+  # REDIS
+  # ---------------------------------------------------------
+  redis:
+    image: redis:7
+    container_name: store_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  # ---------------------------------------------------------
+  # MAILPIT
+  # ---------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit
+    container_name: store_mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+# ---------------------------------------------------------
+# VOLUMES
+# ---------------------------------------------------------
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:

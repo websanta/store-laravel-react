@@ -1,116 +1,195 @@
-# Define network for inter-container communication
+services:
+  # Main application container (Laravel + React)
+  store:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/php-fpm/Dockerfile
+      args:
+        - ENABLE_XDEBUG=${ENABLE_XDEBUG:-true}
+    container_name: store_app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./infrastructure/docker/php-fpm/php.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./infrastructure/docker/php-fpm/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-store_db}
+      - DB_USERNAME=${DB_USERNAME:-store_user}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_secret}
+      - MAIL_HOST=mailpit
+      - MAIL_PORT=1025
+      - XDEBUG_MODE=${XDEBUG_MODE:-debug}
+      - XDEBUG_CONFIG=client_host=host.docker.internal
+      - PHP_IDE_CONFIG=serverName=Docker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - store_network
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx web server
+  nginx:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/nginx/Dockerfile
+    container_name: store_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./infrastructure/docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./infrastructure/docker/nginx/conf.d/ssl.conf:/etc/nginx/conf.d/ssl.conf
+      - ./infrastructure/docker/nginx/certs:/etc/nginx/certs
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      store:
+        condition: service_healthy
+    networks:
+      - store_network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Node.js for Vite development server
+  node:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/node/Dockerfile
+    container_name: store_node
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - node_modules:/var/www/node_modules
+    ports:
+      - "5173:5173"
+    command: npm run dev
+    networks:
+      - store_network
+    depends_on:
+      - store
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5173 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: store_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-store_db}
+      POSTGRES_USER: ${DB_USERNAME:-store_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - store_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-store_user} -d ${DB_DATABASE:-store_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: store_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@store.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    networks:
+      - store_network
+    depends_on:
+      - postgres
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: store_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - store_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mailpit for email testing
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: store_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - store_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   store_network:
     driver: bridge
 
-services:
-  # ----------------------------------------------------
-  # PHP-FPM / Laravel Container (The 'store' application)
-  # ----------------------------------------------------
-  store:
-    build:
-      context: ./docker/php-fpm
-      dockerfile: Dockerfile
-    container_name: store-app
-    restart: unless-stopped
-    # Use the host's project directory for development
-    volumes:
-      - ../../:/var/www/html
-      - ./docker/php-fpm/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
-      - ./docker/php-fpm/php.ini:/usr/local/etc/php/conf.d/40-custom.ini:ro
-    networks:
-      - store_network
-
-  # ----------------------------------------------------
-  # Web Server Container (Nginx)
-  # ----------------------------------------------------
-  nginx:
-    build:
-      context: ./docker/nginx
-      dockerfile: Dockerfile
-    container_name: store-nginx
-    restart: unless-stopped
-    ports:
-      # Map host port 443 to container port 443 for HTTPS access
-      - "443:443"
-    volumes:
-      # Mount the public directory for Nginx to serve static files
-      - ../../:/var/www/html:ro
-      # Mount certificates (place your self-signed certs here)
-      - ./docker/nginx/certs:/etc/nginx/certs:ro
-    networks:
-      - store_network
-    depends_on:
-      - store # Nginx needs PHP-FPM to be ready
-
-  # ----------------------------------------------------
-  # Frontend Build Container (Node.js)
-  # ----------------------------------------------------
-  node:
-    build:
-      context: ./docker/node
-      dockerfile: Dockerfile
-    container_name: store-node-builder
-    tty: true # Keep the container running for 'npm run dev' or interactive commands
-    volumes:
-      - ../../:/var/www/html
-    networks:
-      - store_network
-
-  # ----------------------------------------------------
-  # Database Container (PostgreSQL)
-  # ----------------------------------------------------
-  postgres:
-    image: postgres:16-alpine
-    container_name: store-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      # Persistent storage for database data
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - store_network
-    ports:
-      # Expose port 5432 to the host for local access (optional)
-      - "5432:5432"
-
-  # ----------------------------------------------------
-  # Database Management Tool (pgAdmin)
-  # ----------------------------------------------------
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: store-pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@vmmint22.local
-      PGADMIN_DEFAULT_PASSWORD: pgadmin_password
-    volumes:
-      # Persistent storage for pgAdmin configuration
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - store_network
-    ports:
-      # Access pgAdmin on host port 8080
-      - "8080:80"
-    depends_on:
-      - postgres
-
-  # ----------------------------------------------------
-  # Cache/Queue Container (Redis)
-  # ----------------------------------------------------
-  redis:
-    image: redis:7-alpine
-    container_name: store-redis
-    restart: unless-stopped
-    networks:
-      - store_network
-
-# Define volumes for persistent data
 volumes:
   postgres_data:
     driver: local
   pgadmin_data:
+    driver: local
+  redis_data:
+    driver: local
+  node_modules:
+    driver: local
+  nginx_logs:
     driver: local

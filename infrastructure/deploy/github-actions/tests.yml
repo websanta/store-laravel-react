@@ -1,71 +1,144 @@
-name: CI Tests
+name: Run Tests
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, develop ]
   pull_request:
-    branches:
-      - main
+    branches: [ main, develop ]
 
 jobs:
-
-  backend-tests:
+  tests:
     runs-on: ubuntu-latest
+
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine
         env:
+          POSTGRES_DB: store_test
           POSTGRES_USER: store_user
           POSTGRES_PASSWORD: secret
-          POSTGRES_DB: store_db
-        ports:
-          - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U store_user -d store_db"
+          --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up PHP
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.3
-          extensions: pdo_pgsql, pgsql, bcmath, zip, gd, redis
-          ini-values: post_max_size=256M, upload_max_filesize=256M
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_pgsql, pgsql, redis, gd, zip
+          coverage: xdebug
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Copy .env file
+        run: |
+          cp .env.example .env
+          php artisan key:generate
 
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Copy .env
-        run: cp backend/.env.example backend/.env
+      - name: Install NPM dependencies
+        run: npm ci
 
-      - name: Run Laravel migrations
-        run: php backend/artisan migrate --force
+      - name: Build frontend assets
+        run: npm run build
 
-      - name: Run PHPUnit
-        run: php backend/vendor/bin/phpunit --testdox
+      - name: Run database migrations
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: store_test
+          DB_USERNAME: store_user
+          DB_PASSWORD: secret
+        run: php artisan migrate --force
+
+      - name: Execute tests (PHPUnit)
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: store_test
+          DB_USERNAME: store_user
+          DB_PASSWORD: secret
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: php artisan test --coverage --min=80
+
+      - name: Upload coverage reports
+        if: success()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: phpstan, php-cs-fixer
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyse
+
+      - name: Check code style
+        run: ./vendor/bin/php-cs-fixer fix --dry-run --diff
 
   frontend-tests:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run frontend tests
-        run: |
-          cd frontend
-          npm run test
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build production assets
+        run: npm run build

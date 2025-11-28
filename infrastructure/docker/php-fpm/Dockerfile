@@ -1,35 +1,76 @@
-# Base image for Laravel - PHP 8.3
 FROM php:8.3-fpm-alpine
 
-# Install system dependencies and PHP extensions
-RUN apk update && apk add --no-cache \
-    postgresql-dev \
-    libpq \
-    libzip-dev \
-    unzip \
+# Build arguments
+ARG ENABLE_XDEBUG=true
+
+# Set working directory
+WORKDIR /var/www
+
+# Install system dependencies
+RUN apk add --no-cache \
     git \
-    supervisor \
-    openssl \
-    oniguruma-dev \
-    && docker-php-ext-install \
-    pdo pdo_pgsql \
+    curl \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
     zip \
+    unzip \
+    postgresql-dev \
+    icu-dev \
+    oniguruma-dev \
+    bash \
+    linux-headers \
+    $PHPIZE_DEPS
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    pgsql \
     mbstring \
     exif \
-    bcmath
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    intl \
+    opcache
+
+# Install Redis extension
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
+# Install Xdebug (conditionally)
+RUN if [ "$ENABLE_XDEBUG" = "true" ]; then \
+        pecl install xdebug-3.3.1 \
+        && docker-php-ext-enable xdebug; \
+    fi
+
+# Clean up build dependencies
+RUN apk del $PHPIZE_DEPS linux-headers
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
-WORKDIR /var/www/html
+# Create system user to run Composer and Artisan Commands
+RUN addgroup -g 1000 www && \
+    adduser -D -u 1000 -G www www
 
-# Copy custom php.ini configuration
-COPY php.ini /usr/local/etc/php/conf.d/40-custom.ini
+# Copy application files
+COPY --chown=www:www . /var/www
 
-# Copy entrypoint script and make it executable
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Set proper permissions
+RUN chown -R www:www /var/www \
+    && chmod -R 755 /var/www/storage \
+    && chmod -R 755 /var/www/bootstrap/cache
 
-ENTRYPOINT ["entrypoint.sh"]
+# Switch to non-root user
+USER www
+
+# Expose port 9000 for PHP-FPM
+EXPOSE 9000
+
+# Start PHP-FPM server
 CMD ["php-fpm"]

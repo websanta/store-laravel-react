@@ -1,56 +1,309 @@
-# --- Makefile for Laravel/React Docker Development ---
+.PHONY: help build up down restart logs shell composer artisan npm test clean install setup
 
-# Define names of services
-DOCKER_COMPOSE_FILE := infrastructure/docker-compose.yml
-PHP_SERVICE := store
-NODE_SERVICE := node
+# Color output
+YELLOW := \033[0;33m
+GREEN := \033[0;32m
+RED := \033[0;31m
+BLUE := \033[0;34m
+NC := \033[0m # No Color
 
-# Define project root where all application files live
-APP_ROOT := $(shell pwd)
+help: ## Show this help message
+	@echo '$(YELLOW)Available commands:$(NC)'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-25s$(NC) %s\n", $$1, $$2}'
 
-.PHONY: up down install artisan test frontend-dev certs
+install: ## Initial project installation (complete setup)
+	@echo "$(YELLOW)Starting complete project installation...$(NC)"
+	@make setup
+	@make build
+	@make up
+	@make composer-install
+	@make npm-install
+	@make key-generate
+	@make pest-install
+	@make migrate
+	@make storage-link
+	@make permissions
+	@echo "$(GREEN)============================================$(NC)"
+	@echo "$(GREEN)Installation complete!$(NC)"
+	@echo "$(YELLOW)Access points:$(NC)"
+	@echo "  $(BLUE)Application:$(NC) https://vmmint22.local"
+	@echo "  $(BLUE)Admin Panel:$(NC) https://vmmint22.local/admin"
+	@echo "  $(BLUE)Mailpit:$(NC)     http://localhost:8025"
+	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
+	@echo "$(GREEN)============================================$(NC)"
 
-# Start all containers in detached mode and build images if necessary
-up:
-	@echo "Starting Docker containers..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) up -d --build
+setup: ## Setup environment file
+	@if [ ! -f .env ]; then \
+		echo "$(YELLOW)Creating .env file...$(NC)"; \
+		cp .env.example .env; \
+		echo "$(GREEN).env file created$(NC)"; \
+	else \
+		echo "$(BLUE).env file already exists$(NC)"; \
+	fi
 
-# Stop and remove all containers, networks, and volumes
-down:
-	@echo "Stopping and removing Docker containers..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) down --remove-orphans
+build: ## Build Docker containers
+	@echo "$(YELLOW)Building Docker containers...$(NC)"
+	docker compose build --no-cache
 
-# Install Composer and Node dependencies
-install: composer-install node-install
+build-quick: ## Build Docker containers (with cache)
+	@echo "$(YELLOW)Building Docker containers (quick)...$(NC)"
+	docker compose build
 
-composer-install:
-	@echo "Installing Composer dependencies..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(PHP_SERVICE) composer install
+up: ## Start Docker containers
+	@echo "$(YELLOW)Starting Docker containers...$(NC)"
+	docker compose up -d
+	@echo "$(GREEN)Containers started!$(NC)"
+	@make ps
 
-node-install:
-	@echo "Installing Node dependencies..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(NODE_SERVICE) npm install
+down: ## Stop Docker containers
+	@echo "$(YELLOW)Stopping Docker containers...$(NC)"
+	docker compose down
+	@echo "$(GREEN)Containers stopped!$(NC)"
 
-# Run Laravel Artisan commands
-artisan:
-	@echo "Running php artisan $(cmd)..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(PHP_SERVICE) php artisan $(cmd)
+restart: ## Restart Docker containers
+	@echo "$(YELLOW)Restarting containers...$(NC)"
+	@make down
+	@make up
 
-# Start frontend development watcher (npm run dev)
-frontend-dev:
-	@echo "Starting frontend development server (npm run dev)..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm -p 5173:5173 $(NODE_SERVICE) npm run dev
+logs: ## Show container logs (use CONTAINER=name for specific container)
+	@docker compose logs -f $(CONTAINER)
 
-# Generate self-signed SSL certificates for vmmint22.local
-certs:
-	@echo "Generating self-signed SSL certificates for vmmint22.local..."
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-		-keyout infrastructure/docker/nginx/certs/temp-key.pem \
-		-out infrastructure/docker/nginx/certs/temp.pem \
-		-subj "/C=RU/ST=Moscow/L=Moscow/O=WebSanta Dev/OU=IT Department/CN=vmmint22.local"
-	@echo "Certificates generated in infrastructure/docker/nginx/certs/"
+logs-store: ## Show store container logs
+	@docker compose logs -f store
 
-# Example test target (update once testing is configured)
-test:
-	@echo "Running application tests..."
-	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(PHP_SERVICE) php artisan test
+logs-nginx: ## Show nginx container logs
+	@docker compose logs -f nginx
+
+logs-node: ## Show node container logs
+	@docker compose logs -f node
+
+shell: ## Access store container shell
+	@docker compose exec store sh
+
+shell-root: ## Access store container shell as root
+	@docker compose exec -u root store sh
+
+shell-node: ## Access node container shell
+	@docker compose exec node sh
+
+composer-install: ## Install Composer dependencies
+	@echo "$(YELLOW)Installing Composer dependencies...$(NC)"
+	docker compose exec store composer install --optimize-autoloader
+	@echo "$(GREEN)Composer dependencies installed!$(NC)"
+
+composer-update: ## Update Composer dependencies
+	@echo "$(YELLOW)Updating Composer dependencies...$(NC)"
+	docker compose exec store composer update
+	@echo "$(GREEN)Composer dependencies updated!$(NC)"
+
+composer: ## Run Composer command (use CMD="command" syntax)
+	@docker compose exec store composer $(CMD)
+
+npm-install: ## Install NPM dependencies
+	@echo "$(YELLOW)Installing NPM dependencies...$(NC)"
+	docker compose exec node npm install
+	@echo "$(GREEN)NPM dependencies installed!$(NC)"
+
+npm-update: ## Update NPM dependencies
+	@echo "$(YELLOW)Updating NPM dependencies...$(NC)"
+	docker compose exec node npm update
+	@echo "$(GREEN)NPM dependencies updated!$(NC)"
+
+npm: ## Run NPM command (use CMD="command" syntax)
+	@docker compose exec node npm $(CMD)
+
+artisan: ## Run Artisan command (use CMD="command" syntax)
+	@docker compose exec store php artisan $(CMD)
+
+key-generate: ## Generate application key
+	@echo "$(YELLOW)Generating application key...$(NC)"
+	docker compose exec store php artisan key:generate
+	@echo "$(GREEN)Application key generated!$(NC)"
+
+migrate: ## Run database migrations
+	@echo "$(YELLOW)Running database migrations...$(NC)"
+	docker compose exec store php artisan migrate
+	@echo "$(GREEN)Migrations complete!$(NC)"
+
+migrate-fresh: ## Fresh migration with seed
+	@echo "$(RED)WARNING: This will drop all tables!$(NC)"
+	@echo "$(YELLOW)Running fresh migrations with seed...$(NC)"
+	docker compose exec store php artisan migrate:fresh --seed
+	@echo "$(GREEN)Fresh migrations complete!$(NC)"
+
+migrate-rollback: ## Rollback last migration
+	@echo "$(YELLOW)Rolling back last migration...$(NC)"
+	docker compose exec store php artisan migrate:rollback
+	@echo "$(GREEN)Rollback complete!$(NC)"
+
+seed: ## Seed the database
+	@echo "$(YELLOW)Seeding database...$(NC)"
+	docker compose exec store php artisan db:seed
+	@echo "$(GREEN)Database seeded!$(NC)"
+
+cache-clear: ## Clear application cache
+	@echo "$(YELLOW)Clearing cache...$(NC)"
+	docker compose exec store php artisan cache:clear
+	docker compose exec store php artisan config:clear
+	docker compose exec store php artisan route:clear
+	docker compose exec store php artisan view:clear
+	@echo "$(GREEN)Cache cleared!$(NC)"
+
+optimize: ## Optimize application
+	@echo "$(YELLOW)Optimizing application...$(NC)"
+	docker compose exec store php artisan config:cache
+	docker compose exec store php artisan route:cache
+	docker compose exec store php artisan view:cache
+	docker compose exec store php artisan optimize
+	@echo "$(GREEN)Application optimized!$(NC)"
+
+pest-install: ## Install Pest testing framework
+	@echo "$(YELLOW)Installing Pest...$(NC)"
+	docker compose exec store composer require pestphp/pest --dev --with-all-dependencies
+	docker compose exec store composer require pestphp/pest-plugin-laravel --dev
+	docker compose exec store php artisan pest:install
+	@echo "$(GREEN)Pest installed successfully!$(NC)"
+
+test: ## Run tests with Pest
+	@echo "$(YELLOW)Running tests with Pest...$(NC)"
+	docker compose exec store php artisan test
+	@echo "$(GREEN)Tests complete!$(NC)"
+
+test-coverage: ## Run tests with coverage
+	@echo "$(YELLOW)Running tests with coverage...$(NC)"
+	docker compose exec store php artisan test --coverage --min=80
+	@echo "$(GREEN)Tests with coverage complete!$(NC)"
+
+test-filter: ## Run specific test (use FILTER="TestName")
+	@docker compose exec store php artisan test --filter=$(FILTER)
+
+test-parallel: ## Run tests in parallel
+	@echo "$(YELLOW)Running tests in parallel...$(NC)"
+	docker compose exec store php artisan test --parallel
+	@echo "$(GREEN)Parallel tests complete!$(NC)"
+
+storage-link: ## Create storage symbolic link
+	@echo "$(YELLOW)Creating storage link...$(NC)"
+	docker compose exec store php artisan storage:link
+	@echo "$(GREEN)Storage link created!$(NC)"
+
+permissions: ## Fix storage and cache permissions
+	@echo "$(YELLOW)Fixing permissions...$(NC)"
+	@chmod +x scripts/setup-permissions.sh
+	@./scripts/setup-permissions.sh
+	@echo "$(GREEN)Permissions fixed!$(NC)"
+
+clean: ## Clean up containers, volumes, and cache
+	@echo "$(RED)WARNING: This will remove all containers, volumes, and cached data!$(NC)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "$(YELLOW)Cleaning up...$(NC)"; \
+		docker compose down -v; \
+		rm -rf vendor node_modules; \
+		rm -rf storage/logs/*.log; \
+		echo "$(GREEN)Cleanup complete!$(NC)"; \
+	fi
+
+db-backup: ## Backup database (output: backup_YYYY-MM-DD_HH-MM-SS.sql)
+	@echo "$(YELLOW)Creating database backup...$(NC)"
+	@docker compose exec -T postgres pg_dump -U store_user store_db > backup_$$(date +%Y-%m-%d_%H-%M-%S).sql
+	@echo "$(GREEN)Backup created: backup_$$(date +%Y-%m-%d_%H-%M-%S).sql$(NC)"
+
+db-restore: ## Restore database from backup (use FILE=backup.sql)
+	@if [ -z "$(FILE)" ]; then \
+		echo "$(RED)Error: Please specify FILE=backup.sql$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Restoring database from $(FILE)...$(NC)"
+	@docker compose exec -T postgres psql -U store_user store_db < $(FILE)
+	@echo "$(GREEN)Database restored!$(NC)"
+
+ps: ## Show running containers
+	@docker compose ps
+
+stats: ## Show container resource usage
+	@docker stats --no-stream
+
+breeze-install: ## Install Laravel Breeze with React and TypeScript
+	@echo "$(YELLOW)Installing Laravel Breeze...$(NC)"
+	docker compose exec store composer require laravel/breeze --dev
+	docker compose exec store php artisan breeze:install react --typescript
+	docker compose exec node npm install
+	docker compose exec node npm run build
+	@echo "$(GREEN)Breeze with React and TypeScript installed successfully!$(NC)"
+
+filament-install: ## Install Filament admin panel
+	@echo "$(YELLOW)Installing Filament...$(NC)"
+	docker compose exec store composer require filament/filament:"^3.0"
+	docker compose exec store php artisan filament:install --panels
+	@echo "$(GREEN)Filament installed successfully!$(NC)"
+	@echo "$(BLUE)Create admin user with: make filament-user$(NC)"
+
+filament-user: ## Create Filament admin user
+	@docker compose exec store php artisan make:filament-user
+
+dev: ## Start development environment
+	@echo "$(YELLOW)Starting development environment...$(NC)"
+	@make up
+	@docker compose exec -d node npm run dev
+	@echo "$(GREEN)Development environment started!$(NC)"
+	@echo "$(BLUE)Application:$(NC) https://vmmint22.local"
+	@echo "$(BLUE)Vite HMR:$(NC)    http://localhost:5173"
+	@echo "$(BLUE)Mailpit:$(NC)     http://localhost:8025"
+
+xdebug-enable: ## Enable Xdebug
+	@echo "$(YELLOW)Enabling Xdebug...$(NC)"
+	@docker compose exec store sed -i 's/;zend_extension=xdebug/zend_extension=xdebug/' /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini || true
+	@docker compose restart store
+	@echo "$(GREEN)Xdebug enabled!$(NC)"
+
+xdebug-disable: ## Disable Xdebug (better performance)
+	@echo "$(YELLOW)Disabling Xdebug...$(NC)"
+	@docker compose exec store sed -i 's/zend_extension=xdebug/;zend_extension=xdebug/' /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini || true
+	@docker compose restart store
+	@echo "$(GREEN)Xdebug disabled!$(NC)"
+
+xdebug-status: ## Check Xdebug status
+	@docker compose exec store php -v | grep -i xdebug || echo "Xdebug is not enabled"
+
+mailpit-open: ## Open Mailpit in browser
+	@echo "$(BLUE)Opening Mailpit...$(NC)"
+	@xdg-open http://localhost:8025 2>/dev/null || open http://localhost:8025 2>/dev/null || echo "Please open http://localhost:8025 manually"
+
+init-scripts: ## Make all scripts executable
+	@echo "$(YELLOW)Making scripts executable...$(NC)"
+	@chmod +x scripts/*.sh
+	@echo "$(GREEN)Scripts are now executable!$(NC)"
+
+typescript-check: ## Check TypeScript types
+	@echo "$(YELLOW)Checking TypeScript types...$(NC)"
+	@docker compose exec node npm run type-check || true
+
+lint: ## Run ESLint
+	@echo "$(YELLOW)Running ESLint...$(NC)"
+	@docker compose exec node npm run lint
+
+lint-fix: ## Fix ESLint issues
+	@echo "$(YELLOW)Fixing ESLint issues...$(NC)"
+	@docker compose exec node npm run lint:fix
+
+format: ## Format code with Prettier
+	@echo "$(YELLOW)Formatting code...$(NC)"
+	@docker compose exec node npm run format
+
+info: ## Show system information
+	@echo "$(GREEN)============================================$(NC)"
+	@echo "$(YELLOW)Docker Compose Version:$(NC)"
+	@docker compose version
+	@echo ""
+	@echo "$(YELLOW)Container Status:$(NC)"
+	@docker compose ps
+	@echo ""
+	@echo "$(YELLOW)Access URLs:$(NC)"
+	@echo "  $(BLUE)Application:$(NC)  https://vmmint22.local"
+	@echo "  $(BLUE)Admin Panel:$(NC)  https://vmmint22.local/admin"
+	@echo "  $(BLUE)Mailpit UI:$(NC)   http://localhost:8025"
+	@echo "  $(BLUE)pgAdmin:$(NC)      http://localhost:5050"
+	@echo "  $(BLUE)Vite Dev:$(NC)     http://localhost:5173"
+	@echo "$(GREEN)============================================$(NC)"

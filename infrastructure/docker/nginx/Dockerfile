@@ -1,13 +1,30 @@
-# Base Nginx image
 FROM nginx:alpine
 
-# Copy custom configuration
-COPY conf.d/nginx.conf /etc/nginx/conf.d/default.conf
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+# Remove default configuration
+RUN rm -rf /etc/nginx/conf.d/*
+
+# Copy custom nginx configurations
+COPY infrastructure/docker/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
+COPY infrastructure/docker/nginx/conf.d/ssl.conf /etc/nginx/conf.d/ssl.conf
 
 # Copy SSL certificates
-# NOTE: The user is responsible for placing valid certificates here.
-# These paths must match the paths referenced in nginx.conf.
-COPY certs/temp.pem /etc/nginx/certs/vmmint22.local.pem
-COPY certs/temp-key.pem /etc/nginx/certs/vmmint22.local.key
+COPY infrastructure/docker/nginx/certs /etc/nginx/certs
 
-WORKDIR /var/www/html
+# Set proper permissions
+RUN chmod 644 /etc/nginx/certs/*.pem 2>/dev/null || true
+
+# Create log directory
+RUN mkdir -p /var/log/nginx
+
+# Expose ports
+EXPOSE 80 443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,12 +1,36 @@
-# Base image for building React assets
 FROM node:20-alpine
 
 # Set working directory
-WORKDIR /var/www/html
+WORKDIR /var/www
 
-# Install global dependencies if needed (e.g., specific npm packages)
-# RUN npm install -g some-global-package
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    bash \
+    curl
 
-# Default command if the container is run interactively (e.g. for 'npm run dev')
-# The actual commands will be run via docker-compose/Makefile
-CMD ["sh"]
+# Create node user with same UID as www user in PHP container
+RUN addgroup -g 1000 nodegroup && \
+    adduser -D -u 1000 -G nodegroup nodeuser
+
+# Copy package files first (for better caching)
+COPY --chown=nodeuser:nodegroup package*.json ./
+
+# Install Node.js dependencies
+RUN npm install
+
+# Copy application files
+COPY --chown=nodeuser:nodegroup . .
+
+# Switch to non-root user
+USER nodeuser
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:5173 || exit 1
+
+# Start development server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

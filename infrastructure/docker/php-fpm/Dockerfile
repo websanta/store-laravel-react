@@ -64,7 +64,7 @@ USER laravel
 # (allows caching during docker build in CI)
 # ---------------------------------------------------------
 COPY --chown=laravel:laravel backend/composer.json backend/composer.lock ./
-RUN if [ -f "composer.json" ]; then composer install --no-interaction --prefer-dist; fi
+RUN composer install --no-interaction --prefer-dist || true
 
 # ---------------------------------------------------------
 # Default command

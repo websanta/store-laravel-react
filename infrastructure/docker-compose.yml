@@ -11,7 +11,7 @@ services:
     working_dir: /var/www/backend
     volumes:
       - ../backend:/var/www/backend
-      - ./docker/php-fpm/php.ini:/usr/local/etc/php/php.ini # Исправленный путь к php.ini
+      - ./docker/php-fpm/php.ini:/usr/local/etc/php/php.ini
     environment:
       APP_ENV: local
       APP_DEBUG: "true"

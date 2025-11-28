@@ -97,7 +97,5 @@ backup_*.sql
 .Trash-*
 .nfs*
 
-# ----------------------
-# AI Prompts & Git Patches
-# ----------------------
+# AI
 .ai

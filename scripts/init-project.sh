@@ -42,22 +42,33 @@ fi
 
 print_success "Docker is running"
 
+# Clean up any existing temp directory
+if [ -d "temp" ]; then
+    print_info "Cleaning up existing temp directory..."
+    sudo rm -rf temp
+fi
+
 # Check if Laravel is already installed
 if [ -f "composer.json" ] && grep -q "laravel/framework" composer.json; then
     print_warning "Laravel already installed, skipping installation..."
 else
     print_info "Installing Laravel 12..."
 
-    # Install Laravel using Composer in Docker
-    docker run --rm -v $(pwd):/app -w /app composer:latest \
+    # Install Laravel using Composer in Docker with proper user permissions
+    docker run --rm -v $(pwd):/app -w /app -u $(id -u):$(id -g) composer:latest \
         create-project --prefer-dist laravel/laravel temp "12.*"
 
     # Move files from temp to root
     if [ -d "temp" ]; then
+        print_info "Moving Laravel files to project root..."
         shopt -s dotglob
-        mv temp/* . 2>/dev/null || true
+        cp -r temp/* . 2>/dev/null || true
         shopt -u dotglob
+
+        # Clean up temp directory
+        print_info "Cleaning up temp directory..."
         rm -rf temp
+
         print_success "Laravel 12 installed successfully"
     else
         print_error "Failed to install Laravel"
@@ -120,6 +131,7 @@ print_success "Directories created"
 # Set proper permissions
 print_info "Setting permissions..."
 chmod -R 775 storage bootstrap/cache
+chown -R $USER:$USER storage bootstrap/cache
 print_success "Permissions set"
 
 # Create .gitkeep files

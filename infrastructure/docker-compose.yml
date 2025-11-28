@@ -1,130 +1,116 @@
+# Define network for inter-container communication
+networks:
+  store_network:
+    driver: bridge
+
 services:
-
-  # ---------------------------------------------------------
-  # BACKEND – PHP-FPM (Laravel)
-  # ---------------------------------------------------------
-  backend:
+  # ----------------------------------------------------
+  # PHP-FPM / Laravel Container (The 'store' application)
+  # ----------------------------------------------------
+  store:
     build:
-      context: ../ # Контекст
-      dockerfile: infrastructure/docker/php-fpm/Dockerfile # Путь от корня
-    container_name: store_backend
-    working_dir: /var/www/backend
+      context: ./docker/php-fpm
+      dockerfile: Dockerfile
+    container_name: store-app
+    restart: unless-stopped
+    # Use the host's project directory for development
     volumes:
-      - ../backend:/var/www/backend
-      - ./docker/php-fpm/php.ini:/usr/local/etc/php/php.ini
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: store_db
-      DB_USERNAME: store_user
-      DB_PASSWORD: secret
-      REDIS_HOST: redis
-    depends_on:
-      - postgres
-      - redis
+      - ../../:/var/www/html
+      - ./docker/php-fpm/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      - ./docker/php-fpm/php.ini:/usr/local/etc/php/conf.d/40-custom.ini:ro
+    networks:
+      - store_network
 
-  # ---------------------------------------------------------
-  # FRONTEND – Node (Vite dev server)
-  # ---------------------------------------------------------
-  frontend:
-    build:
-      context: ../ # Контекст
-      dockerfile: infrastructure/docker/node/Dockerfile # Путь от корня
-    container_name: store_frontend
-    working_dir: /var/www/frontend
-    volumes:
-      - ../frontend:/var/www/frontend
-    ports:
-      - "5173:5173"
-    environment:
-      VITE_BACKEND_URL: https://vmmint22.local/api
-    command: ["npm", "run", "dev"]
-    depends_on:
-      - backend
-
-  # ---------------------------------------------------------
-  # NGINX – acts as reverse proxy for backend + builds in prod
-  # ---------------------------------------------------------
+  # ----------------------------------------------------
+  # Web Server Container (Nginx)
+  # ----------------------------------------------------
   nginx:
     build:
-      context: ./docker/nginx # <-- ИСПРАВЛЕНО: Указывает на папку NGINX Dockerfile
-      dockerfile: Dockerfile  # <-- Ищет Dockerfile внутри этого контекста
-    container_name: store_nginx
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: store-nginx
+    restart: unless-stopped
     ports:
-      - "80:80"
+      # Map host port 443 to container port 443 for HTTPS access
       - "443:443"
     volumes:
-      - ../backend:/var/www/backend
-      - ../frontend/dist:/var/www/frontend/dist
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d # ИСПРАВЛЕНО: Добавлен путь 'docker/nginx/'
-      - ./docker/nginx/certs:/etc/nginx/certs # ИСПРАВЛЕНО: Добавлен путь 'docker/nginx/'
+      # Mount the public directory for Nginx to serve static files
+      - ../../:/var/www/html:ro
+      # Mount certificates (place your self-signed certs here)
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - store_network
     depends_on:
-      - backend
-      - frontend
-    extra_hosts:
-      - "vmmint22.local:127.0.0.1"
+      - store # Nginx needs PHP-FPM to be ready
 
-  # ---------------------------------------------------------
-  # DATABASE: Postgres
-  # ---------------------------------------------------------
-  postgres:
-    image: postgres:16
-    container_name: store_postgres
-    restart: unless-stopped
+  # ----------------------------------------------------
+  # Frontend Build Container (Node.js)
+  # ----------------------------------------------------
+  node:
+    build:
+      context: ./docker/node
+      dockerfile: Dockerfile
+    container_name: store-node-builder
+    tty: true # Keep the container running for 'npm run dev' or interactive commands
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ../../:/var/www/html
+    networks:
+      - store_network
+
+  # ----------------------------------------------------
+  # Database Container (PostgreSQL)
+  # ----------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: store-db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: store_db
-      POSTGRES_USER: store_user
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # Persistent storage for database data
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - store_network
     ports:
+      # Expose port 5432 to the host for local access (optional)
       - "5432:5432"
 
-  # ---------------------------------------------------------
-  # PGADMIN (Database Web UI)
-  # ---------------------------------------------------------
+  # ----------------------------------------------------
+  # Database Management Tool (pgAdmin)
+  # ----------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4
-    container_name: store_pgadmin
+    container_name: store-pgadmin
+    restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@local.dev
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "8081:80"
+      PGADMIN_DEFAULT_EMAIL: admin@vmmint22.local
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_password
     volumes:
+      # Persistent storage for pgAdmin configuration
       - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - store_network
+    ports:
+      # Access pgAdmin on host port 8080
+      - "8080:80"
     depends_on:
       - postgres
 
-  # ---------------------------------------------------------
-  # REDIS
-  # ---------------------------------------------------------
+  # ----------------------------------------------------
+  # Cache/Queue Container (Redis)
+  # ----------------------------------------------------
   redis:
-    image: redis:7
-    container_name: store_redis
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
+    image: redis:7-alpine
+    container_name: store-redis
+    restart: unless-stopped
+    networks:
+      - store_network
 
-  # ---------------------------------------------------------
-  # MAILPIT
-  # ---------------------------------------------------------
-  mailpit:
-    image: axllent/mailpit
-    container_name: store_mailpit
-    ports:
-      - "8025:8025"
-      - "1025:1025"
-
-# ---------------------------------------------------------
-# VOLUMES
-# ---------------------------------------------------------
+# Define volumes for persistent data
 volumes:
   postgres_data:
-  redis_data:
+    driver: local
   pgadmin_data:
+    driver: local

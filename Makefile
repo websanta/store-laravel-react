@@ -1,91 +1,56 @@
-# ==============================
-# Makefile — Laravel + React + Docker
-# ==============================
+# --- Makefile for Laravel/React Docker Development ---
 
-# ---------------------------------------------------------
-# Переменные
-# ---------------------------------------------------------
-COMPOSE=docker-compose -f infrastructure/docker/docker-compose.yml
-APP_CONTAINER=store_backend
-FRONTEND_CONTAINER=store_frontend
-NGINX_CONTAINER=store_nginx
+# Define names of services
+DOCKER_COMPOSE_FILE := infrastructure/docker-compose.yml
+PHP_SERVICE := store
+NODE_SERVICE := node
 
-# ---------------------------------------------------------
-# Инфраструктура
-# ---------------------------------------------------------
-up: ## Запустить все контейнеры (dev)
-	@echo "🚀 Поднимаем все контейнеры..."
-	$(COMPOSE) up -d --build
+# Define project root where all application files live
+APP_ROOT := $(shell pwd)
 
-down: ## Остановить все контейнеры
-	@echo "🛑 Останавливаем контейнеры..."
-	$(COMPOSE) down
+.PHONY: up down install artisan test frontend-dev certs
 
-restart: down up ## Перезапустить все контейнеры
+# Start all containers in detached mode and build images if necessary
+up:
+	@echo "Starting Docker containers..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) up -d --build
 
-logs: ## Смотреть логи всех контейнеров
-	$(COMPOSE) logs -f
+# Stop and remove all containers, networks, and volumes
+down:
+	@echo "Stopping and removing Docker containers..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) down --remove-orphans
 
-ps: ## Список работающих контейнеров
-	$(COMPOSE) ps
+# Install Composer and Node dependencies
+install: composer-install node-install
 
-# ---------------------------------------------------------
-# Backend
-# ---------------------------------------------------------
-bash-backend: ## Открыть bash в контейнере backend
-	$(COMPOSE) exec $(APP_CONTAINER) bash
+composer-install:
+	@echo "Installing Composer dependencies..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(PHP_SERVICE) composer install
 
-composer-install: ## Установить PHP-зависимости
-	$(COMPOSE) exec $(APP_CONTAINER) composer install --no-interaction --prefer-dist
+node-install:
+	@echo "Installing Node dependencies..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(NODE_SERVICE) npm install
 
-artisan-%: ## Выполнить artisan команду, например: make artisan-migrate
-	$(COMPOSE) exec $(APP_CONTAINER) php artisan $*
+# Run Laravel Artisan commands
+artisan:
+	@echo "Running php artisan $(cmd)..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(PHP_SERVICE) php artisan $(cmd)
 
-migrate: ## Запустить миграции
-	$(COMPOSE) exec $(APP_CONTAINER) php artisan migrate
+# Start frontend development watcher (npm run dev)
+frontend-dev:
+	@echo "Starting frontend development server (npm run dev)..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm -p 5173:5173 $(NODE_SERVICE) npm run dev
 
-seed: ## Заполнить базу данными
-	$(COMPOSE) exec $(APP_CONTAINER) php artisan db:seed
+# Generate self-signed SSL certificates for vmmint22.local
+certs:
+	@echo "Generating self-signed SSL certificates for vmmint22.local..."
+	openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+		-keyout infrastructure/docker/nginx/certs/temp-key.pem \
+		-out infrastructure/docker/nginx/certs/temp.pem \
+		-subj "/C=RU/ST=Moscow/L=Moscow/O=WebSanta Dev/OU=IT Department/CN=vmmint22.local"
+	@echo "Certificates generated in infrastructure/docker/nginx/certs/"
 
-test: ## Запустить PHPUnit тесты
-	$(COMPOSE) exec $(APP_CONTAINER) ./vendor/bin/phpunit
-
-# ---------------------------------------------------------
-# Frontend
-# ---------------------------------------------------------
-bash-frontend: ## Открыть bash в контейнере frontend
-	$(COMPOSE) exec $(FRONTEND_CONTAINER) sh
-
-npm-install: ## Установить frontend зависимости
-	$(COMPOSE) exec $(FRONTEND_CONTAINER) npm install
-
-frontend-dev: ## Запустить Vite dev server
-	$(COMPOSE) exec $(FRONTEND_CONTAINER) npm run dev
-
-frontend-build: ## Собрать frontend для продакшена
-	$(COMPOSE) exec $(FRONTEND_CONTAINER) npm run build
-
-# ---------------------------------------------------------
-# Nginx
-# ---------------------------------------------------------
-bash-nginx: ## Открыть bash в контейнере nginx
-	$(COMPOSE) exec $(NGINX_CONTAINER) sh
-
-# ---------------------------------------------------------
-# Общие утилиты
-# ---------------------------------------------------------
-fix-permissions: ## Исправить права на Laravel storage/cache
-	$(COMPOSE) exec $(APP_CONTAINER) chown -R www-data:www-data /var/www/backend/storage /var/www/backend/bootstrap/cache
-
-fresh: ## Сбросить базу, мигрировать и запустить seed
-	$(COMPOSE) exec $(APP_CONTAINER) php artisan migrate:fresh --seed
-
-build: ## Собрать все образы (backend + frontend + nginx)
-	$(COMPOSE) build --no-cache
-
-# ---------------------------------------------------------
-# Help
-# ---------------------------------------------------------
-help: ## Показать все команды
-	@echo "Makefile — доступные команды:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {p*]()
+# Example test target (update once testing is configured)
+test:
+	@echo "Running application tests..."
+	docker compose -f $(DOCKER_COMPOSE_FILE) run --rm $(PHP_SERVICE) php artisan test

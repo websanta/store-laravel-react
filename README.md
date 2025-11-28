@@ -1,41 +1,99 @@
-# Multi-Vendor E-Commerce Marketplace (Laravel + React)
+Store Laravel/React Marketplace
 
-![Project Logo](docs/assets/logo.png)
+This repository contains the infrastructure and initial setup for a multi-vendor e-commerce marketplace built using Laravel 12.x (Backend/API/Admin) and React (Frontend/Client).
 
-## 📌 Project Overview
+The project is designed to run locally within a Dockerized environment using custom PHP-FPM, Nginx, and Node.js containers, alongside PostgreSQL and Redis.
 
-This is a **full-stack multi-vendor e-commerce marketplace** built with:
+🚀 Setup & Installation
 
-- **Backend:** Laravel 12.39.0 (PHP 8.3)
-- **Frontend:** React SPA (Vite + TailwindCSS)
-- **Database:** PostgreSQL 16
-- **Cache & Queue:** Redis
-- **Web Server:** Nginx
-- **Containerization:** Docker + Docker Compose
-- **CI/CD:** GitHub Actions
-- **Payment Gateway (optional):** Stripe
+Prerequisites
 
-The project is designed as a **PET-project for portfolio**, demonstrating professional full-stack skills including:
+Docker and Docker Compose (v2.x) installed.
 
-- Separation of frontend and backend (SPA + API)
-- Multi-vendor architecture
-- Role-based access (Admin, Vendor, User)
-- Product CRUD with variations
-- Shopping cart & checkout
-- Notifications (emails)
-- Dockerized dev & production environments
-- CI/CD pipelines with automated tests
+VS Code with Remote-SSH configured for your Linux Mint VM.
 
----
+A self-signed SSL certificate for vmmint22.local.
 
-## 📂 Project Structure
+1. Generate SSL Certificates
 
-```text
-/store-laravel-react/
-├── backend/                     # Laravel API
-├── frontend/                    # React SPA
-├── infrastructure/              # Docker, CI/CD, deploy scripts
-├── docs/                        # Documentation & architecture diagrams
-├── Makefile                     # Common commands for dev, test, deploy
-├── .gitignore
-└── README.md
+For local HTTPS access at https://vmmint22.local/, you need to generate a self-signed certificate and key.
+
+# Use the Makefile target to easily generate certificates (recommended)
+make certs
+
+
+The generated temp.pem and temp-key.pem files should be placed in infrastructure/docker/nginx/certs/.
+
+2. Configure Environment
+
+Copy the example environment file and update the variables as needed.
+
+cp .env.example .env
+# Edit .env and adjust PostgreSQL, Redis, and Laravel settings.
+
+
+3. Build and Run Containers
+
+Use the included Makefile to manage the services.
+
+# Build custom images and start all services in detached mode
+make up
+
+# Check the status of all containers
+docker compose ps
+
+
+4. Application Initialization
+
+Once containers are running, install dependencies and set up the database.
+
+# Install Composer dependencies and Node modules
+make install
+
+# Generate Laravel application key
+make artisan key:generate
+
+# Run database migrations and seeders
+make artisan migrate --seed
+
+# Start the frontend watcher (for development)
+make frontend-dev
+
+
+The application should now be accessible at https://vmmint22.local/ and the pgAdmin interface at http://localhost:8080.
+
+🛠️ Usage via Makefile
+
+The Makefile provides convenient shortcuts for common development tasks:
+
+Command
+
+Description
+
+make up
+
+Builds and starts all Docker services.
+
+make down
+
+Stops and removes all containers and networks.
+
+make install
+
+Installs Composer and Node dependencies inside containers.
+
+make artisan <cmd>
+
+Runs php artisan <cmd> inside the store container.
+
+make frontend-dev
+
+Starts the Node container to run npm run dev (Vite hot reload).
+
+make test
+
+Runs tests (requires setup).
+
+make certs
+
+Generates self-signed SSL certificates for local use.

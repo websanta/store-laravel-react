@@ -3,7 +3,8 @@
 # =========================================================
 
 # Composer dependencies
-/vendor/
+/vendor
+composer.lock
 
 # Environment variables
 .env
@@ -11,46 +12,41 @@
 .env.*.local
 
 # Laravel cache, logs, sessions
+/bootstrap/cache/*.php
+/node_modules
+/public/build
+/public/dist
+/public/hot
+/public/storage
 /storage/framework/cache/data/*
 /storage/logs/*.log
+/storage/*.key
 /storage/debugbar/*
-/bootstrap/cache/*.php
+/vendor
+/.vite
+/.cache
+.env
+.env.testing
+npm-debug.log
+yarn-error.log
+
+# Vite environment variables
+.env
+.env.local
+.env.*.local
 
 # PHPUnit cache
 .phpunit.result.cache
 
-# Laravel storage keys
-/storage/*.key
-
 # ---------------------------------------------------------
 # IDE / Editor files (PHPStorm, VSCode, Vim, etc.)
 # ---------------------------------------------------------
-/.idea/
+/.idea
 /*.iml
-/.vscode/
+/.vscode
+/.cursor
 *.swp
 *.swo
-
-# Composer
-/composer.lock
-
-# ---------------------------------------------------------
-# Node / React
-# ---------------------------------------------------------
-
-# Node modules
-/frontend/node_modules/
-
-# Build directories
-/frontend/dist/
-/frontend/build/
-/frontend/.vite/
-/frontend/.cache/
-
-# React / Vite environment variables
-/frontend/.env
-/frontend/.env.local
-/frontend/.env.*.local
 
 # ----------------------
 # Docker
@@ -61,6 +57,9 @@
 /infrastructure/docker/**/logs/
 /infrastructure/docker/**/tmp/
 /infrastructure/docker/**/cache/
+/infrastructure/docker/nginx/certs/temp.pem
+/infrastructure/docker/nginx/certs/temp-key.pem
+.docker/
 
 # ---------------------------------------------------------
 # OS files
@@ -78,3 +77,8 @@ desktop.ini
 # ----------------------
 *.log
 *.out
+
+# ----------------------
+# AI Prompts & Git Patches
+# ----------------------
+.ai

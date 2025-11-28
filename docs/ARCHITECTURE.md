@@ -1,83 +1,85 @@
-# Multi-Vendor Marketplace — Architecture Documentation
+Store Laravel/React Marketplace Architecture
 
-**Project:** Laravel 12 + React SPA
-**Database:** PostgreSQL
-**Cache / Queue:** Redis
-**Frontend:** React + Vite + Tailwind
-**Backend:** Laravel API (PHP 8.3, Composer)
-**Web server:** Nginx
-**Deployment:** Docker + Docker Compose
+The application follows a modern, containerized, multi-tier architecture designed for development efficiency and production readiness.
 
----
+1. Overview (C4 Model - System Context)
 
-## 1️⃣ Context Diagram (C4 Level 1)
+The Store Marketplace is composed of six primary Docker containers, orchestrated by Docker Compose, running on a Linux Mint Virtual Machine.
 
-Describes the users, external systems, and high-level system interactions.
+Component
 
-```mermaid
-C4Context
-    title Multi-Vendor Marketplace — System Context
+Technology
 
-    Person(user, "End User", "Browses products, orders, pays")
-    Person(vendor, "Vendor", "Manages own products, receives payouts")
-    Person(admin, "Admin", "Manages site, users, categories, products")
+Role
 
-    System(system, "Store Laravel + React", "Multi-vendor marketplace")
+Client
 
-    user --> system : "Browse products, place orders"
-    vendor --> system : "Add / manage products"
-    admin --> system : "Manage users, categories, products"
+Nginx
 
-    System_Ext(stripe, "Stripe Payment Gateway", "Processes payments")
-    System_Ext(mail, "SMTP / Mail Service", "Sends emails")
+Web Server
 
-    system --> stripe : "Initiates payment transactions"
-    system --> mail : "Sends order and notification emails"
+Terminates SSL, routes requests to the appropriate backend service, and serves static frontend assets.
 
-C4Container
-    title Store Laravel + React — Container Diagram
+Store (PHP-FPM)
 
-    System_Boundary(system, "Store Laravel + React") {
+Laravel 12.x
 
-        Container(backend, "Laravel API", "PHP 8.3 + PostgreSQL", "REST API for frontend and admin")
-        Container(frontend, "React SPA", "React + Vite + Tailwind", "Single Page App for users and vendors")
-        Container(nginx, "Nginx", "Nginx", "Serves SPA & reverse-proxies API requests")
-        Container(postgres, "PostgreSQL", "Database", "Stores users, orders, products, categories")
-        Container(redis, "Redis", "Cache / Queues", "Caches data and handles job queues")
-    }
+Handles API requests, server-side logic, Authentication (Breeze), and Admin Panel (Filament).
 
-    frontend --> nginx : "HTTP requests"
-    frontend --> backend : "REST API calls"
-    backend --> postgres : "Read / write"
-    backend --> redis : "Cache, queues"
+Node
 
-C4Component
-    title Laravel Backend — Components
+Node.js 20
 
-    Container(backend, "Laravel API", "PHP 8.3 + PostgreSQL") {
+Environment for compiling and serving the React frontend assets (Vite/Mix).
 
-        Component(auth, "Auth & Roles", "Handles login, registration, roles & permissions")
-        Component(products, "Product Management", "CRUD, variations, categories")
-        Component(cart, "Shopping Cart", "Handles adding/removing items")
-        Component(orders, "Orders & Checkout", "Checkout process, Stripe integration")
-        Component(vendorPanel, "Vendor Panel", "Vendor dashboard, payouts")
-        Component(notifications, "Notifications", "Emails, system notifications")
-        Component(api, "API Layer", "Exposes endpoints for frontend and admin")
-    }
+PostgreSQL
 
-    frontend --> api : "API calls"
-    auth --> postgres : "Users & roles"
-    products --> postgres : "Product & category data"
-    orders --> postgres : "Orders & payments"
-    notifications --> mail : "Send emails"
+Database
 
-flowchart TB
-    subgraph docker [Docker Environment]
-        direction TB
-        nginx["Nginx (80/443)"] --> frontend["React SPA"]
-        nginx --> backend["Laravel API (PHP-FPM)"]
-        backend --> postgres["PostgreSQL DB"]
-        backend --> redis["Redis Cache / Queue"]
-    end
+Primary persistent data store for the application.
 
-    user["User / Vendor / Admin"] --> nginx
+Redis
+
+Key-Value Store
+
+Used for caching and queue management.
+
+pgAdmin
+
+Database GUI
+
+Web-based tool for PostgreSQL database administration.
+
+2. Request Flow and Tiers
+
+A. Frontend/React Flow (SPA - Single Page Application)
+
+Client Request: A user requests https://vmmint22.local/.
+
+Nginx: The Nginx container (nginx) intercepts the request.
+
+Static Files: If the path is for a static asset (CSS, JS, images, or the root /), Nginx serves the file directly from the mounted project volume (/var/www/html/public).
+
+React Routing: For all non-API routes, Nginx is configured to serve the index.html file, allowing the React client-side router (e.g., React Router) to handle the routing and rendering.
+
+B. Backend/API Flow (Laravel)
+
+Client Request: A user makes an API request (e.g., /api/products or /login).
+
+Nginx: Nginx determines the request is for a dynamic resource (e.g., a route that matches a Laravel route).
+
+PHP-FPM Proxy: Nginx proxies the request to the store container on port 9000 via FastCGI.
+
+Laravel Execution: The PHP-FPM process executes the Laravel application logic, interacts with the PostgreSQL/Redis services, and returns the response (JSON or HTML for the admin panel).
+
+Response: The response is sent back through Nginx to the client.
+
+3. Data Persistence
+
+The application utilizes Docker volumes to ensure data persistence across container restarts:
+
+postgres_data volume: Persists the entire PostgreSQL database state.
+
+pgadmin_data volume: Stores pgAdmin user and server configuration.
+
+Host Volume Mount (../../:/var/www/html): The application code is mounted from the host machine (Linux Mint VM) directly into the store and node containers, enabling real-time code changes in VS Code to be reflected without rebuilding containers.

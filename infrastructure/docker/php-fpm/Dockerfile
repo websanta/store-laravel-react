@@ -1,72 +1,35 @@
-# ---------------------------------------------------------
-# BASE: PHP-FPM 8.3
-# ---------------------------------------------------------
-FROM php:8.3-fpm
+# Base image for Laravel - PHP 8.3
+FROM php:8.3-fpm-alpine
 
-# ---------------------------------------------------------
-# System dependencies
-# ---------------------------------------------------------
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    zip \
-    unzip \
-    libpq-dev \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    libonig-dev \
-    libxml2-dev \
+# Install system dependencies and PHP extensions
+RUN apk update && apk add --no-cache \
+    postgresql-dev \
+    libpq \
     libzip-dev \
-    pkg-config \
+    unzip \
+    git \
     supervisor \
-    && rm -rf /var/lib/apt/lists/*
-
-# ---------------------------------------------------------
-# PHP Extensions
-# ---------------------------------------------------------
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-install \
-    pdo \
-    pdo_pgsql \
-    pgsql \
-    bcmath \
-    gd \
+    openssl \
+    oniguruma-dev \
+    && docker-php-ext-install \
+    pdo pdo_pgsql \
     zip \
-    opcache
+    mbstring \
+    exif \
+    bcmath
 
-# ---------------------------------------------------------
 # Install Composer
-# ---------------------------------------------------------
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# ---------------------------------------------------------
-# Create non-root user
-# ---------------------------------------------------------
-RUN useradd -u 1000 -ms /bin/bash laravel
+# Set working directory
+WORKDIR /var/www/html
 
-# ---------------------------------------------------------
-# Workdir (project itself will be mounted by Docker Compose)
-# ---------------------------------------------------------
-WORKDIR /var/www/backend
+# Copy custom php.ini configuration
+COPY php.ini /usr/local/etc/php/conf.d/40-custom.ini
 
-# ---------------------------------------------------------
-# Permissions (Laravel storage + cache + logs)
-# ---------------------------------------------------------
-RUN mkdir -p /var/www/backend/storage \
-    && mkdir -p /var/www/backend/bootstrap/cache \
-    && chown -R laravel:laravel /var/www/backend
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-USER laravel
-
-# ---------------------------------------------------------
-# Composer install if vendor exists
-# (allows caching during docker build in CI)
-# ---------------------------------------------------------
-COPY --chown=laravel:laravel backend/composer.json backend/composer.lock ./
-RUN composer install --no-interaction --prefer-dist || true
-
-# ---------------------------------------------------------
-# Default command
-# ---------------------------------------------------------
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm"]

@@ -252,7 +252,7 @@ dev: ## Start development environment
 	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
 	@echo "$(GREEN)Development environment started!$(NC)"
 	@echo "$(BLUE)Application:$(NC) https://vmmint22.local"
-	@echo "$(BLUE)Vite HMR:$(NC)    http://localhost:5173"
+	@echo "$(BLUE)Vite HMR:$(NC)    http://localhost:5174"
 	@echo "$(BLUE)Mailpit:$(NC)     http://localhost:8025"
 
 xdebug-enable: ## Enable Xdebug
@@ -308,5 +308,5 @@ info: ## Show system information
 	@echo "  $(BLUE)Admin Panel:$(NC)  https://vmmint22.local/admin"
 	@echo "  $(BLUE)Mailpit UI:$(NC)   http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)      http://localhost:5050"
-	@echo "  $(BLUE)Vite Dev:$(NC)     http://localhost:5173"
+	@echo "  $(BLUE)Vite Dev:$(NC)     http://localhost:5174"
 	@echo "$(GREEN)============================================$(NC)"

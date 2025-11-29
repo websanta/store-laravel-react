@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # Build arguments
 ARG ENABLE_XDEBUG=true
@@ -44,8 +44,8 @@ RUN pecl install redis \
 
 # Install Xdebug (conditionally)
 RUN if [ "$ENABLE_XDEBUG" = "true" ]; then \
-        pecl install xdebug-3.3.1 \
-        && docker-php-ext-enable xdebug; \
+        pecl install xdebug && \
+        docker-php-ext-enable xdebug; \
     fi
 
 # Clean up build dependencies

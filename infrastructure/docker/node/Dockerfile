@@ -9,21 +9,17 @@ RUN apk add --no-cache \
     bash \
     curl
 
-# Create node user with same UID as www user in PHP container
-RUN addgroup -g 1000 nodegroup && \
-    adduser -D -u 1000 -G nodegroup nodeuser
-
 # Copy package files first (for better caching)
-COPY --chown=nodeuser:nodegroup package*.json ./
+COPY package*.json ./
 
 # Install Node.js dependencies
 RUN npm install
 
 # Copy application files
-COPY --chown=nodeuser:nodegroup . .
+COPY . .
 
-# Switch to non-root user
-USER nodeuser
+# Use the built-in 'node' user that exists in Node.js image
+USER node
 
 # Expose Vite dev server port
 EXPOSE 5173

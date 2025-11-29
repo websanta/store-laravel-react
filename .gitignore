@@ -98,4 +98,7 @@ backup_*.sql
 .nfs*
 
 # AI
-.ai
+.ai/
+
+# bak
+.bak/

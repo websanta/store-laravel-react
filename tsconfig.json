@@ -1,44 +1,20 @@
 {
     "compilerOptions": {
-        "target": "ES2020",
-        "useDefineForClassFields": true,
-        "lib": ["ES2020", "DOM", "DOM.Iterable"],
+        "allowJs": true,
         "module": "ESNext",
-        "skipLibCheck": true,
-
-        /* Bundler mode */
         "moduleResolution": "bundler",
-        "allowImportingTsExtensions": true,
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "noEmit": true,
         "jsx": "react-jsx",
-
-        /* Linting */
         "strict": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "noFallthroughCasesInSwitch": true,
-
-        /* Path aliases */
-        "baseUrl": ".",
+        "isolatedModules": true,
+        "target": "ESNext",
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "skipLibCheck": true,
+        "noEmit": true,
         "paths": {
             "@/*": ["./resources/js/*"],
-            "@components/*": ["./resources/js/Components/*"],
-            "@pages/*": ["./resources/js/Pages/*"],
-            "@layouts/*": ["./resources/js/Layouts/*"],
-            "@types/*": ["./resources/js/types/*"]
+            "ziggy-js": ["./vendor/tightenco/ziggy"]
         }
     },
-    "include": [
-        "resources/js/**/*.ts",
-        "resources/js/**/*.tsx",
-        "resources/js/**/*.d.ts"
-    ],
-    "exclude": [
-        "node_modules",
-        "vendor",
-        "public"
-    ],
-    "references": [{ "path": "./tsconfig.node.json" }]
+    "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx", "resources/js/**/*.d.ts"]
 }

@@ -19,13 +19,13 @@ install: ## Initial project installation (complete setup)
 	@make setup
 	@make build
 	@make up
+	@make permissions
 	@make composer-install
 	@make npm-install
 	@make key-generate
 	@make pest-install
 	@make migrate
 	@make storage-link
-	@make permissions
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Installation complete!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
@@ -160,12 +160,13 @@ optimize: ## Optimize application
 	docker compose -f $(COMPOSE_FILE) exec store php artisan optimize
 	@echo "$(GREEN)Application optimized!$(NC)"
 
-pest-install: ## Install Pest testing framework
-	@echo "$(YELLOW)Installing Pest...$(NC)"
+pest-install: ## Install Pest testing framework (Pest 3.x)
+	@echo "$(YELLOW)Installing Pest and Pest Laravel plugin...$(NC)"
 	docker compose -f $(COMPOSE_FILE) exec store composer require pestphp/pest --dev --with-all-dependencies
 	docker compose -f $(COMPOSE_FILE) exec store composer require pestphp/pest-plugin-laravel --dev
-	docker compose -f $(COMPOSE_FILE) exec store php artisan pest:install
-	@echo "$(GREEN)Pest installed successfully!$(NC)"
+	@echo "$(YELLOW)Initializing Pest folder structure...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store ./vendor/bin/pest --init
+	@echo "$(GREEN)Pest installed and initialized successfully!$(NC)"
 
 test: ## Run tests with Pest
 	@echo "$(YELLOW)Running tests with Pest...$(NC)"

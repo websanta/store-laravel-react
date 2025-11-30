@@ -33,7 +33,6 @@ This document lists all Dockerfile and configuration files with their exact loca
 │   └── docker-compose.yml        ✅ Docker orchestration
 ├── scripts/
 │   ├── init-project.sh           ✅ Project initialization
-│   ├── setup-permissions.sh      ✅ Fix permissions
 │   └── seed-database.sh          ✅ Database seeding
 ├── .env.example                  ✅ Environment template
 ├── .eslintrc.json                ✅ ESLint configuration
@@ -355,7 +354,6 @@ Use this to verify all files are in place:
 
 ### Scripts
 - [ ] `scripts/init-project.sh`
-- [ ] `scripts/setup-permissions.sh`
 - [ ] `scripts/seed-database.sh`
 
 ### VS Code

@@ -48,11 +48,57 @@ setup: ## Setup environment file
 		echo "$(BLUE).env file already exists$(NC)"; \
 	fi
 
-build: ## Build Docker containers
+dev: ## Start development environment
+	@echo "$(YELLOW)Starting development environment...$(NC)"
+	@make up
+	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
+	@echo "$(GREEN)============================================$(NC)"
+	@echo "$(GREEN)Development environment started!$(NC)"
+	@echo "$(YELLOW)Access points:$(NC)"
+	@echo "  $(BLUE)Application:$(NC) https://vmmint22.local"
+	@echo "  $(BLUE)Admin Panel:$(NC) https://vmmint22.local/admin"
+	@echo "  $(BLUE)Mailpit:$(NC)     http://localhost:8025"
+	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
+	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
+	@echo "$(GREEN)============================================$(NC)"
+
+fbuild: ## Build assets for production
+	@echo "$(YELLOW)Building assets for production...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec node npm run build
+	@echo "$(GREEN)Production build complete!$(NC)"
+	@echo "$(BLUE)Built files are in public/build/$(NC)"
+
+build-watch: ## Build assets with watch mode
+	@echo "$(YELLOW)Building assets in watch mode...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec node npm run build -- --watch
+
+build: ## Full production build (composer + npm)
+	@echo "$(YELLOW)Starting full production build...$(NC)"
+	@make composer-install
+	@make npm-build
+	@make optimize
+	@echo "$(GREEN)============================================$(NC)"
+	@echo "$(GREEN)Production build complete!$(NC)"
+	@echo "$(YELLOW)Built assets:$(NC) public/build/"
+	@echo "$(YELLOW)Next steps:$(NC)"
+	@echo "  1. Deploy files to production server"
+	@echo "  2. Run migrations: make migrate"
+	@echo "  3. Clear cache: make cache-clear"
+	@echo "$(GREEN)============================================$(NC)"
+
+deploy-prepare: ## Prepare application for deployment
+	@echo "$(YELLOW)Preparing application for deployment...$(NC)"
+	@make cache-clear
+	@make composer-install
+	@make npm-build
+	@make optimize
+	@echo "$(GREEN)Application ready for deployment!$(NC)"
+
+dbuild: ## Build Docker containers
 	@echo "$(YELLOW)Building Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) build --no-cache
 
-build-quick: ## Build Docker containers (with cache)
+dbuild-quick: ## Build Docker containers (with cache)
 	@echo "$(YELLOW)Building Docker containers (quick)...$(NC)"
 	docker compose -f $(COMPOSE_FILE) build
 
@@ -284,15 +330,6 @@ filament-install: ## Install Filament admin panel
 
 filament-user: ## Create Filament admin user
 	@docker compose -f $(COMPOSE_FILE) exec store php artisan make:filament-user
-
-dev: ## Start development environment
-	@echo "$(YELLOW)Starting development environment...$(NC)"
-	@make up
-	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
-	@echo "$(GREEN)Development environment started!$(NC)"
-	@echo "$(BLUE)Application:$(NC) https://vmmint22.local"
-	@echo "$(BLUE)Vite HMR:$(NC)    http://localhost:5174"
-	@echo "$(BLUE)Mailpit:$(NC)     http://localhost:8025"
 
 xdebug-enable: ## Enable Xdebug
 	@echo "$(YELLOW)Enabling Xdebug...$(NC)"

@@ -19,6 +19,8 @@ install: ## Initial project installation (complete setup)
 	@make setup
 	@make build
 	@make up
+	@echo "$(YELLOW)Waiting for containers to be ready...$(NC)"
+	@sleep 10
 	@make permissions
 	@make composer-install
 	@make npm-install
@@ -26,6 +28,7 @@ install: ## Initial project installation (complete setup)
 	@make pest-install
 	@make migrate
 	@make storage-link
+	@make start-vite
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Installation complete!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
@@ -33,6 +36,7 @@ install: ## Initial project installation (complete setup)
 	@echo "  $(BLUE)Admin Panel:$(NC) https://vmmint22.local/admin"
 	@echo "  $(BLUE)Mailpit:$(NC)     http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
+	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
 	@echo "$(GREEN)============================================$(NC)"
 
 setup: ## Setup environment file
@@ -62,6 +66,11 @@ down: ## Stop Docker containers
 	@echo "$(YELLOW)Stopping Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) down
 	@echo "$(GREEN)Containers stopped!$(NC)"
+
+down-v: ## Stop and remove all containers with volumes
+	@echo "$(YELLOW)Stopping containers and removing volumes...$(NC)"
+	docker compose -f $(COMPOSE_FILE) down -v
+	@echo "$(GREEN)Containers and volumes removed!$(NC)"
 
 restart: ## Restart Docker containers
 	@echo "$(YELLOW)Restarting containers...$(NC)"
@@ -103,17 +112,33 @@ composer: ## Run Composer command (use CMD="command" syntax)
 	@docker compose -f $(COMPOSE_FILE) exec store composer $(CMD)
 
 npm-install: ## Install NPM dependencies
-	@echo "$(YELLOW)Installing NPM dependencies...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec node npm install
+	@echo "$(YELLOW)Installing NPM dependencies (this may take 2-3 minutes)...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec node npm install --prefer-offline --no-audit
 	@echo "$(GREEN)NPM dependencies installed!$(NC)"
 
 npm-update: ## Update NPM dependencies
 	@echo "$(YELLOW)Updating NPM dependencies...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec node npm update
+	@docker compose -f $(COMPOSE_FILE) exec node npm update
 	@echo "$(GREEN)NPM dependencies updated!$(NC)"
 
 npm: ## Run NPM command (use CMD="command" syntax)
 	@docker compose -f $(COMPOSE_FILE) exec node npm $(CMD)
+
+start-vite: ## Start Vite dev server
+	@echo "$(YELLOW)Starting Vite dev server...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
+	@echo "$(GREEN)Vite dev server started in background!$(NC)"
+	@echo "$(BLUE)Check logs with: make logs-node$(NC)"
+
+stop-vite: ## Stop Vite dev server
+	@echo "$(YELLOW)Stopping Vite dev server...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec node pkill -f vite || true
+	@echo "$(GREEN)Vite dev server stopped!$(NC)"
+
+restart-vite: ## Restart Vite dev server
+	@make stop-vite
+	@sleep 2
+	@make start-vite
 
 artisan: ## Run Artisan command (use CMD="command" syntax)
 	@docker compose -f $(COMPOSE_FILE) exec store php artisan $(CMD)
@@ -196,6 +221,19 @@ permissions: ## Fix storage and cache permissions
 	@chmod +x scripts/setup-permissions.sh
 	@./scripts/setup-permissions.sh
 	@echo "$(GREEN)Permissions fixed!$(NC)"
+
+volumes-list: ## List all project volumes
+	@echo "$(YELLOW)Project volumes:$(NC)"
+	@docker volume ls | grep infrastructure || echo "No volumes found"
+
+volumes-prune: ## Remove unused volumes (careful!)
+	@echo "$(RED)WARNING: This will remove ALL unused Docker volumes!$(NC)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker volume prune -f; \
+		echo "$(GREEN)Unused volumes removed!$(NC)"; \
+	fi
 
 clean: ## Clean up containers, volumes, and cache
 	@echo "$(RED)WARNING: This will remove all containers, volumes, and cached data!$(NC)"

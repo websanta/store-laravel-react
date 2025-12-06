@@ -7,26 +7,33 @@ WORKDIR /var/www
 RUN apk add --no-cache \
     git \
     bash \
-    curl
+    curl \
+    shadow
+
+# Get host user UID/GID (default to 1000 if not provided)
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Modify the node user to match host UID/GID
+RUN deluser --remove-home node && \
+    addgroup -g ${GROUP_ID} node && \
+    adduser -D -u ${USER_ID} -G node node
 
 # Copy package files first (for better caching)
-COPY package*.json ./
-
-# Install Node.js dependencies
-RUN npm install
+COPY --chown=node:node package*.json ./
 
 # Copy application files
-COPY . .
+COPY --chown=node:node . .
 
 # Use the built-in 'node' user that exists in Node.js image
 USER node
 
 # Expose Vite dev server port
-EXPOSE 5173
+EXPOSE 5174
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:5173 || exit 1
+    CMD curl -k -f https://localhost:5174 || exit 1
 
-# Start development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Don't start dev server automatically - we'll install deps first via Makefile
+CMD ["tail", "-f", "/dev/null"]

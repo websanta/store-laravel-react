@@ -88,13 +88,13 @@ services:
       - node_modules:/var/www/node_modules
     ports:
       - "5174:5174"
-    command: npm run dev
+    # command: npm run dev
     networks:
       - store_network
     depends_on:
       - store
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5174 || exit 1"]
+      test: ["CMD-SHELL", "curl -k https://localhost:5174 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -128,7 +128,7 @@ services:
     container_name: store_pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@store.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@store.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'

@@ -101,7 +101,7 @@ make ps
 |---------|-----|-------------|
 | **Application** | https://vmmint22.local | - |
 | **Mailpit UI** | http://localhost:8025 | - |
-| **pgAdmin** | http://localhost:5050 | admin@store.local / admin |
+| **pgAdmin** | http://localhost:5050 | admin@store.com / admin |
 
 ## Step 7: Install Breeze & Filament (Optional)
 

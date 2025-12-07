@@ -14,7 +14,7 @@ export default function InputLabel({
                 className
             }
         >
-            <span className="label-text">{value ? value : children}</span>
+            <span className="label-text text-black ">{value ? value : children}</span>
         </label>
     );
 }

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, router } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 
 const handleLogout = (e) => {
   e.preventDefault();
@@ -7,12 +7,14 @@ const handleLogout = (e) => {
 };
 
 export function Navbar() {
+  const { auth } = usePage().props;
+  const user = auth.user;
   return (
     <div className="navbar bg-base-100 shadow-sm">
       <div className="flex-1">
         <Link href="/" className="btn btn-ghost text-xl">Store</Link>
       </div>
-      <div className="flex-none">
+      <div className="flex gap-4">
         <div className="dropdown dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
             <div className="indicator">
@@ -32,7 +34,9 @@ export function Navbar() {
             </div>
           </div>
         </div>
-        <div className="dropdown dropdown-end">
+
+        {user &&
+          <div className="dropdown dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
             <div className="w-10 rounded-full">
               <img
@@ -54,6 +58,12 @@ export function Navbar() {
             </li>
           </ul>
         </div>
+        }
+        {!user && <>
+          <Link href={route('login')} className="btn">Login</Link>
+          <Link href={route('register')} className="btn btn-primary">Register</Link>
+        </>}
+
       </div>
     </div>
   )

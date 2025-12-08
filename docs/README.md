@@ -78,7 +78,7 @@ make filament-user
 | **Application** | https://vmmint22.local | - |
 | **Admin Panel** | https://vmmint22.local/admin | Created via `make filament-user` |
 | **Mailpit UI** | http://localhost:8025 | - |
-| **pgAdmin** | http://localhost:5050 | admin@store.local / admin |
+| **pgAdmin** | http://localhost:5050 | admin@store.com / admin |
 | **Vite Dev Server** | http://localhost:5173 | - |
 
 ## 🎯 Key Features

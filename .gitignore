@@ -80,9 +80,6 @@ Thumbs.db
 # Xdebug
 xdebug.log
 
-# Composer
-composer.lock
-
 # Database backups
 backup_*.sql
 

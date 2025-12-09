@@ -6,12 +6,13 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "8.4",
-        "filament/filament": "3.3.45",
-        "inertiajs/inertia-laravel": "2.0.11",
-        "laravel/framework": "12.40.2",
-        "laravel/sanctum": "4.2.1",
-        "laravel/tinker": "2.10.2",
+        "php": "^8.4",
+        "filament/filament": "^3.3.45",
+        "inertiajs/inertia-laravel": "^2.0.11",
+        "laravel/framework": "^12.40",
+        "laravel/sanctum": "^4.2",
+        "laravel/tinker": "^2.10",
+        "spatie/laravel-permission": "^6.23",
         "tightenco/ziggy": "2.6.0"
     },
     "require-dev": {

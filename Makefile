@@ -23,6 +23,9 @@ install: ## Initial project installation (complete setup)
 	@sleep 10
 	@make permissions
 	@make composer-install
+	@make livewire-install
+	@make breeze-install
+	@make filament-install
 	@make npm-install
 	@make key-generate
 	@make pest-install
@@ -169,6 +172,12 @@ npm-update: ## Update NPM dependencies
 
 npm: ## Run NPM command (use CMD="command" syntax)
 	@docker compose -f $(COMPOSE_FILE) exec node npm $(CMD)
+
+livewire-install: ## Install Livewire
+	@echo "$(YELLOW)Installing Livewire...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require livewire/livewire
+	docker compose -f $(COMPOSE_FILE) exec store php artisan livewire:publish --assets
+	@echo "$(GREEN)Livewire installed and assets published!$(NC)"
 
 start-vite: ## Start Vite dev server
 	@echo "$(YELLOW)Starting Vite dev server...$(NC)"

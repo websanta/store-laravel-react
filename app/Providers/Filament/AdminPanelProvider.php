@@ -58,8 +58,10 @@ class AdminPanelProvider extends PanelProvider
                     RolesEnum::Vendor->value,
                 ),
             ])
-            ->authMiddleware([
-                Authenticate::class,
-            ]);
+            // Страница login filament
+            // ->authMiddleware([
+            //     Authenticate::class,
+            // ])
+        ;
     }
 }

@@ -8,6 +8,7 @@ use Filament\Widgets;
 use App\Enums\RolesEnum;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Illuminate\Database\Eloquent\Model;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -63,5 +64,10 @@ class AdminPanelProvider extends PanelProvider
             //     Authenticate::class,
             // ])
         ;
+    }
+
+    public function boot()
+    {
+        Model::unguard();
     }
 }

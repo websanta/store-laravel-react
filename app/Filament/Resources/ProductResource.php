@@ -104,6 +104,9 @@ class ProductResource extends Resource
                     ->sortable()
                     ->words(10)
                     ->searchable(),
+                TextColumn::make('price')
+                    ->sortable()
+                    ->numeric(),
                 TextColumn::make('status')
                     ->badge()
                     ->colors(ProductStatusEnum::colors()),
@@ -120,6 +123,7 @@ class ProductResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

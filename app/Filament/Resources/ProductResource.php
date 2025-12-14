@@ -104,6 +104,9 @@ class ProductResource extends Resource
                     ->sortable()
                     ->words(10)
                     ->searchable(),
+                TextColumn::make('price')
+                    ->sortable()
+                    ->numeric(),
                 TextColumn::make('status')
                     ->badge()
                     ->colors(ProductStatusEnum::colors()),

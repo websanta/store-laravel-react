@@ -12,6 +12,7 @@ RUN apk add --no-cache \
     curl \
     libpng-dev \
     libjpeg-turbo-dev \
+    libwebp-dev \
     freetype-dev \
     libzip-dev \
     zip \
@@ -24,7 +25,7 @@ RUN apk add --no-cache \
     $PHPIZE_DEPS
 
 # Install PHP extensions
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg -with-webp \
     && docker-php-ext-install \
     pdo \
     pdo_pgsql \

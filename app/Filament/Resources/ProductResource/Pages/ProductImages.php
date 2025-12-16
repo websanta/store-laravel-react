@@ -12,6 +12,8 @@ class ProductImages extends EditRecord
 {
     protected static string $resource = ProductResource::class;
 
+    protected static ?string $navigationIcon = 'heroicon-s-photo';
+
     public function form(Form $form): Form
     {
         return $form
@@ -34,10 +36,5 @@ class ProductImages extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
-    }
-
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
     }
 }

@@ -157,6 +157,7 @@ class ProductResource extends Resource
             'create' => Pages\CreateProduct::route('/create'),
             'edit' => Pages\EditProduct::route('/{record}/edit'),
             'images' => Pages\ProductImages::route('/{record}/images'),
+            'variations' => Pages\ProductVariationTypes::route('/{record}/variations'),
         ];
     }
 
@@ -165,6 +166,7 @@ class ProductResource extends Resource
         return $page->generateNavigationItems([
             EditProduct::class,
             Pages\ProductImages::class,
+            Pages\ProductVariationTypes::class,
         ]);
     }
 }

@@ -10,21 +10,27 @@ use Filament\Tables\Table;
 use Illuminate\Support\Str;
 use App\Enums\ProductStatusEnum;
 use Filament\Resources\Resource;
+use Filament\Resources\Pages\Page;
 use Filament\Forms\Components\Select;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\RichEditor;
+use Filament\Pages\SubNavigationPosition;
+use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\ProductResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use App\Filament\Resources\ProductResource\RelationManagers;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
+use App\Filament\Resources\ProductResource\Pages\EditProduct;
 
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-s-shopping-bag';
+
+    protected static SubNavigationPosition $subNavigationPosition = SubNavigationPosition::End;
 
     public static function form(Form $form): Form
     {
@@ -100,6 +106,11 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
+                SpatieMediaLibraryImageColumn::make('images')
+                    ->collection('images')
+                    ->limit(1)
+                    ->label('Image')
+                    ->conversion('thumb'),
                 TextColumn::make('title')
                     ->sortable()
                     ->words(10)
@@ -145,6 +156,15 @@ class ProductResource extends Resource
             'index' => Pages\ListProducts::route('/'),
             'create' => Pages\CreateProduct::route('/create'),
             'edit' => Pages\EditProduct::route('/{record}/edit'),
+            'images' => Pages\ProductImages::route('/{record}/images'),
         ];
+    }
+
+    public static function getRecordSubNavigation(Page $page): array
+    {
+        return $page->generateNavigationItems([
+            EditProduct::class,
+            Pages\ProductImages::class,
+        ]);
     }
 }

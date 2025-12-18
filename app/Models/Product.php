@@ -10,6 +10,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use App\Filament\Resources\ProductResource\Pages\ProductVariations;
 
 class Product extends Model implements HasMedia
 {
@@ -38,5 +39,10 @@ class Product extends Model implements HasMedia
     public function variationTypes(): HasMany
     {
         return $this->hasMany(VariationTypes::class);
+    }
+
+    public function variations(): HasMany
+    {
+        return $this->hasMany(ProductVariation::class, 'product_id');
     }
 }

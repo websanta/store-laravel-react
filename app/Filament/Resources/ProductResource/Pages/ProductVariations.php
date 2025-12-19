@@ -4,10 +4,12 @@ namespace App\Filament\Resources\ProductResource\Pages;
 
 use Filament\Actions;
 use Filament\Forms\Form;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Section;
 use App\Enums\ProductVariationTypeEnum;
 use Filament\Forms\Components\Repeater;
+use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\EditRecord;
 use App\Filament\Resources\ProductResource;
@@ -26,11 +28,13 @@ class ProductVariations extends EditRecord
         $fields = [];
 
         foreach ($types as $type) {
-            $fields[] = TextInput::make('variation_type_' . ($type->id) . '.id')
-                ->hidden();
+            $fields[] = Hidden::make('variation_type_' . ($type->id) . '.id')
+                ->default(fn($get, $state) => $state);
 
             $fields[] = TextInput::make('variation_type_' . ($type->id) . '.name')
-                ->label($type->name);
+                ->label($type->name)
+                ->disabled()
+                ->dehydrated(false);
         }
 
         return $form
@@ -41,6 +45,7 @@ class ProductVariations extends EditRecord
                     ->addable(false)
                     ->defaultItems(1)
                     ->schema([
+                        Hidden::make('id'),
                         Section::make()
                             ->schema($fields)
                             ->columns(3),
@@ -90,9 +95,11 @@ class ProductVariations extends EditRecord
 
             if (!empty($match)) {
                 $existingEntry = reset($match);
+                $product['id'] = $existingEntry['id'];
                 $product['quantity'] = $existingEntry['quantity'];
                 $product['price'] = $existingEntry['price'];
             } else {
+                // Do not set id for new variations.
                 $product['quantity'] = $defaultQuantity;
                 $product['price'] = $defaultPrice;
             }
@@ -137,5 +144,75 @@ class ProductVariations extends EditRecord
         }
 
         return $result;
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $formattedData = [];
+
+        foreach ($data['variations'] as $option) {
+            $variationTypeOptionIds = [];
+
+            foreach ($this->record->variationTypes as $variationType) {
+                $key = 'variation_type_' . $variationType->id;
+
+                // Сhecking the existence of the key and get the ID
+                if (isset($option[$key])) {
+                    if (is_array($option[$key]) && isset($option[$key]['id'])) {
+                        $variationTypeOptionIds[] = (int)$option[$key]['id'];
+                    } elseif (is_numeric($option[$key])) {
+                        // If it is already an ID (number or string)
+                        $variationTypeOptionIds[] = (int)$option[$key];
+                    }
+                }
+            }
+
+            $variationData = [
+                'variation_type_option_ids' => $variationTypeOptionIds,
+                'quantity' => $option['quantity'] ?? null,
+                'price' => $option['price'] ?? null,
+            ];
+
+            // Add id only if it exists
+            if (isset($option['id']) && !empty($option['id'])) {
+                $variationData['id'] = $option['id'];
+            }
+
+            $formattedData[] = $variationData;
+        }
+
+        $data['variations'] = $formattedData;
+        return $data;
+    }
+
+    protected function handleRecordUpdate(Model $record, array $data): Model
+    {
+        $variations = $data['variations'];
+        unset($data['variations']);
+
+        foreach ($variations as $variation) {
+            if (isset($variation['id']) && !empty($variation['id'])) {
+                // Updating an existing variation
+                $record->variations()->updateOrCreate(
+                    ['id' => $variation['id']],
+                    [
+                        'variation_type_option_ids' => $variation['variation_type_option_ids'],
+                        'quantity' => $variation['quantity'],
+                        'price' => $variation['price'],
+                    ]
+                );
+            } else {
+                // Create a new one if such a combination does not exist yet.
+                $record->variations()->updateOrCreate(
+                    ['variation_type_option_ids' => $variation['variation_type_option_ids']],
+                    [
+                        'quantity' => $variation['quantity'],
+                        'price' => $variation['price'],
+                    ]
+                );
+            }
+        }
+
+        return $record;
     }
 }

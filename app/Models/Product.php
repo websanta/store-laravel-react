@@ -4,13 +4,15 @@ namespace App\Models;
 
 use App\Models\Category;
 use App\Models\Department;
+use App\Enums\ProductStatusEnum;
 use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use App\Filament\Resources\ProductResource\Pages\ProductVariations;
 
 class Product extends Model implements HasMedia
 {
@@ -24,6 +26,21 @@ class Product extends Model implements HasMedia
             ->width(480);
         $this->addMediaConversion('large')
             ->width(1200);
+    }
+
+    public function scopeForVendor(Builder $query): Builder
+    {
+        return $query->where('created_by', Auth::id());
+    }
+
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('status', ProductStatusEnum::Published);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function department(): BelongsTo

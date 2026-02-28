@@ -124,8 +124,8 @@ function Show({product, variationOptions}: {
       product.variationTypes.map((type, i) => (
         <div className="my-2" key={type.id}>
           <b>{type.name}</b>
-          {type.type === 'image' &&
-            <div className="flex gap-2 mb-4">
+          {type.type === 'Image' &&
+            <div className="flex gap-2 mt-2 mb-4">
               {type.options.map((option) => (
                 <div onClick={() => chooseOption(type.id, option)} key={option.id}>
                   {option.images &&
@@ -135,17 +135,19 @@ function Show({product, variationOptions}: {
                 </div>
               ))}
             </div>}
-          {type.type === 'radio' &&
-            <div className="flex join mb-4">
-              {type.options.map((option) => (
-                <input onChange={() => chooseOption(type.id, option)}
+          {type.type === 'Radio' &&
+            <div className="join mt-2 mb-4 w-full">
+              {type.options.map(option => (
+                <div
+                onClick={() => chooseOption(type.id, option)}
                 key={option.id}
-                className="join-item btn"
+                className={`join-item btn ${selectedOptions[type.id]?.id === option.id ? 'btn-active' : ''}`}
                 type="radio"
                 value={option.id}
                 name={'variation_type_' + type.id}
-                checked={selectedOptions[type.id]?.id === option.id}
-                aria-label={option.name}/>
+                checked={selectedOptions[type.id]?.id === option.id}>
+                  {option.name}
+                </div>
               ))}
             </div>}
         </div>

@@ -1,9 +1,23 @@
+import React from 'react';
 import {Product} from '@/types';
+import ProductItem from '@/Components/App/ProductItem';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import CurrencyFormatter from '@/Components/Core/CurrencyFormatter';
+import Carousel from '@/Components/Core/Carousel';
+import {useForm, usePage, router, Head} from '@inertiajs/react';
+import {useMemo, useState, useEffect} from 'react';
+import {VariationTypeOption} from '@/types';
+import {arraysAreEqual} from '@/helpers';
 
 function Show({product, variationOptions}: {
   product: Product,
   variationOptions: number[]
 }) {
+
+  // Если product null или undefined
+  if (!product) {
+    return <div>Product not found</div>;
+  }
 
   const form = useForm<{
     option_ids: Record<string, number>;
@@ -12,7 +26,7 @@ function Show({product, variationOptions}: {
   }>({
     option_ids: {},
     quantity: 1,
-    price: null, // TODO populate price on change
+    price: null
   });
 
   const {url} = usePage();
@@ -83,7 +97,7 @@ function Show({product, variationOptions}: {
         router.get(url, {
           options: getOptionIdsMap(newOptions),
         }, {
-          preserveState: true,
+          preserveScroll: true,
           preserveState: true
         })
       }
@@ -91,8 +105,120 @@ function Show({product, variationOptions}: {
     })
   }
 
-  return (
+  const onQuantityChange = (ev: React.ChangeEvent<HTMLSelectElement>) => {
+    form.setData('quantity', parseInt(ev.target.value))
+  }
 
+  const addToCart = () => {
+    form.post(route('cart.store', product.id), {
+      preserveScroll: true,
+      preserveState: true,
+      onError: (err) => {
+        console.log(err);
+      }
+    })
+  }
+
+  const renderProductVariationTypes = () => {
+    return (
+      product.variationTypes.map((type, i) => (
+        <div className="my-2" key={type.id}>
+          <b>{type.name}</b>
+          {type.type === 'image' &&
+            <div className="flex gap-2 mb-4">
+              {type.options.map((option) => (
+                <div onClick={() => chooseOption(type.id, option)} key={option.id}>
+                  {option.images &&
+                  <img src={option.images[0].thumb} alt="" className={'w-[50px] ' + (
+                    selectedOptions[type.id]?.id === option.id ? 'outline outline-4 outline-primary' : ''
+                  )}/>}
+                </div>
+              ))}
+            </div>}
+          {type.type === 'radio' &&
+            <div className="flex join mb-4">
+              {type.options.map((option) => (
+                <input onChange={() => chooseOption(type.id, option)}
+                key={option.id}
+                className="join-item btn"
+                type="radio"
+                value={option.id}
+                name={'variation_type_' + type.id}
+                checked={selectedOptions[type.id]?.id === option.id}
+                aria-label={option.name}/>
+              ))}
+            </div>}
+        </div>
+      ))
+    )
+  }
+
+  const renderAddToCartButton = () => {
+    return (
+      <div className="flex gap-4 my-4">
+        <select value={form.data.quantity}
+        onChange={onQuantityChange}
+        className="select border border-base-300 rounded-md px-4 py-2 bg-base-100 w-full">
+          {Array.from({
+            length: Math.min(10, computedProduct.quantity)
+          }).map((el, i) => (
+            <option key={i + 1} value={i + 1}>Quantity: {i + 1}</option>
+          ))}
+        </select>
+        <button
+        onClick={addToCart}
+        className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">
+          Add to Cart
+        </button>
+      </div>
+    )
+  }
+
+  useEffect(() => {
+    const idsMap = Object.fromEntries(
+      Object.entries(selectedOptions)
+      .map(([typeId, option]: [string, VariationTypeOption]) => [typeId, option.id])
+    )
+    console.log(idsMap)
+    form.setData('option_ids', idsMap)
+  }, [selectedOptions]);
+
+  return (
+    <AuthenticatedLayout>
+      <Head title={product.title} />
+
+      <div className="container mx-auto p-8">
+        <div className="grid gap-8 grid-cols-1 lg:grid-cols-12">
+          <div className="col-span-7">
+            <Carousel images={images} />
+          </div>
+          <div className="col-span-5">
+            <h1 className="text-2xl mb-8">{product.title}</h1>
+
+            <div>
+              <div className="text-3xl font-semibold mb-4">
+                <CurrencyFormatter amount={computedProduct.price}/>
+              </div>
+            </div>
+
+            {renderProductVariationTypes()}
+
+            {computedProduct.quantity != undefined &&
+            computedProduct.quantity < 10 &&
+            <div className="text-error my-4">
+              <span>Only {computedProduct.quantity} left in stock</span>
+            </div>
+            }
+
+            {renderAddToCartButton()}
+
+            <b className="text-xl">About this Item</b>
+            <div className="wysiwyg-output"
+            dangerouslySetInnerHTML={{__html: product.description}}/>
+          </div>
+        </div>
+      </div>
+    </AuthenticatedLayout>
   );
 };
 

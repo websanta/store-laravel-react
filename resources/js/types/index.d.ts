@@ -27,30 +27,30 @@ export type VariationType = {
 }
 
 export type Product = {
+  id: number;
+  title: string;
+  slug: string;
+  price: number;
+  quantity: number;
+  image: string;
+  images: Image[];
+  short_description: string;
+  description: string;
+  user: {
     id: number;
-    title: string;
-    slug: string;
-    price: number;
+    name: string;
+  };
+  department: {
+    id: number;
+    name: string;
+  };
+  variationTypes: VariationType[],
+  variations: Array<{
+    id: number;
+    variation_type_option_ids: number[];
     quantity: number;
-    image: string;
-    images: Image[];
-    short_description: string;
-    description: string;
-    user: {
-      id: number;
-      name: string;
-    };
-    department: {
-      id: number;
-      name: string;
-    };
-    variationTypes: VariationType[],
-    variations: Array<{
-      id: number;
-      variation_type_option_ids: number[];
-      quantity: number;
-      price: number;
-    }>
+    price: number;
+  }>
 }
 
 export type PaginationProps<T> = {

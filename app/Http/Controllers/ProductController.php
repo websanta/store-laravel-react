@@ -7,6 +7,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\ProductListResource;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProductController extends Controller
 {
@@ -22,6 +23,8 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
+        JsonResource::withoutWrapping();
+
         return Inertia::render('Product/Show', [
             'product' => new ProductResource($product),
             'variationOptions' => request('options', [])

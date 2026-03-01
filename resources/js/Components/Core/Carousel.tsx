@@ -13,7 +13,7 @@ function Carousel({images}: {
             </a>
           ))}
         </div>
-        <div className="carrousel w-full">
+        <div className="carousel w-full">
           {images.map((image, i) => (
             <div id={'item' + i} className="carousel-item w-full" key={image.id}>
               <img src={image.large} className="w-full" alt="" />

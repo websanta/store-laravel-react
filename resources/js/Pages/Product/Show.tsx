@@ -14,7 +14,7 @@ function Show({product, variationOptions}: {
   variationOptions: number[]
 }) {
 
-  // Если product null или undefined
+  // If product null or undefined
   if (!product) {
     return <div>Product not found</div>;
   }

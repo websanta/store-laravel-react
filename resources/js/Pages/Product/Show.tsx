@@ -13,6 +13,11 @@ function Show({product, variationOptions}: {
   product: Product,
   variationOptions: number[]
 }) {
+  const page = usePage();
+  const { totalPrice, totalQuantity, cartItems, debug } = page.props;
+
+  // Теперь можно логировать
+  console.log('Debug cart:', { totalPrice, totalQuantity, cartItems, debug });
 
   // If product null or undefined
   if (!product) {

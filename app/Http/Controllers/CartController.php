@@ -30,7 +30,7 @@ class CartController extends Controller
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $cartService->add(
+        $cartService->addItemToCart(
             $product,
             $data['quantity'],
             $data['option_ids']

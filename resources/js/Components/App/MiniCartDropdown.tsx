@@ -1,6 +1,7 @@
 import React from 'react';
 import {usePage, Link} from '@inertiajs/react';
 import CurrencyFormatter from '../Core/CurrencyFormatter';
+import { productRoute } from '@/helpers';
 
 function MiniCartDropdown() {
   const {totalQuantity, totalPrice, miniCartItems} = usePage().props;
@@ -20,7 +21,7 @@ function MiniCartDropdown() {
           )}
           {miniCartItems.map(item => (
             <div key={item.id} className={'flex gap-4 p-3'}>
-              <Link href={route('product.show', item.slug)}
+              <Link href={productRoute(item)}
               className={'w-16 h-16 flex justify-center items-center'}>
                 <img src={item.image}
                 alt={item.title}
@@ -28,7 +29,7 @@ function MiniCartDropdown() {
               </Link>
               <div className={'flex-1'}>
                 <h3 className={'mb-3 font-semibold'}>
-                  <Link href={route('product.show', item.slug)}>
+                  <Link href={productRoute(item)}>
                     {item.title}
                   </Link>
                 </h3>

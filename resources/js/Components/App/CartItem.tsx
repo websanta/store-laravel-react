@@ -1,14 +1,41 @@
 import {React, useState} from 'react';
-import {Link, router, useForm, TextInput} from '@inertiajs/react';
+import {Link, router, useForm} from '@inertiajs/react';
 import {CartItem as CartItemType} from '@/types';
-import TextImport from "@/Components/Core/TextImport";
 import CurrencyFormatter from "@/Components/Core/CurrencyFormatter";
+import TextInput from "@/Components/Core/TextInput";
 import { productRoute } from '@/helpers';
 
 function CartItem({item}: {item: CartItemType}) {
   const deleteForm = useForm({
     option_ids: item.option_ids
   })
+
+  const [error, setError] = useState('')
+
+  const onDeleteClick = () => {
+    deleteForm.delete(route('cart.destroy', item.product_id), {
+      preserveScroll: true
+    })
+  }
+
+  // Handle quantity change and immediately update the form
+  const handleQuantityChange = (ev:
+    React.ChangeEvent<HTMLInputElement>) => {
+      setError('')
+      router.put(route('cart.update', item.product_id), {
+        quantity: ev.target.value,
+        option_ids: item.option_ids
+      }, {
+        preserveScroll: true,
+        onSuccess: () => {
+          setError('')
+        },
+        onError: (errors) => {
+          setError(Object.values(errors)[0])
+        }
+      })
+    };
+
   return (
     <>
       <div key={item.id} className="flex gab-6 p-3">
@@ -26,9 +53,9 @@ function CartItem({item}: {item: CartItemType}) {
               {/*<pre>{JSON.stringify(item, undefined, 2)}</pre>*/}
 
               {item.options.map(option => (
-                <div key={option.id}>
+                <div key={option.id} className="mb-1">
                   <strong className="text-bold">
-                    {option.type.name}
+                    {option.type.name + ': '}
                   </strong>
                   {option.name}
                 </div>
@@ -42,15 +69,19 @@ function CartItem({item}: {item: CartItemType}) {
                 <TextInput type="number"
                 defaultValue={item.quantity}
                 onBlur={handleQuantityChange}
-                className="input-sm w-16"></TextInput>
+                className="input-sm w-16"
+                min="1"/>
               </div>
               <button onClick={() => onDeleteClick()}
-                className="btn btn-sm btn-ghost">
+                className="btn btn-sm btn-ghost px-4 bg-red-200 hover:bg-red-400 transition-colors duration-200">
                 Delete
               </button>
-              <button className="btn btn-sm btn-ghost">
+              <button className="btn btn-sm btn-ghost px-4 bg-gray-200 hover:bg-gray-400 transition-colors duration-200">
                 Save for Later
               </button>
+            </div>
+            <div className="font-bold text-lg">
+              <CurrencyFormatter amount={item.price * item.quantity} />
             </div>
           </div>
         </div>

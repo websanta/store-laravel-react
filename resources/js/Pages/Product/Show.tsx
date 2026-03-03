@@ -1,11 +1,10 @@
-import React from 'react';
 import {Product} from '@/types';
 import ProductItem from '@/Components/App/ProductItem';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import CurrencyFormatter from '@/Components/Core/CurrencyFormatter';
 import Carousel from '@/Components/Core/Carousel';
 import {useForm, usePage, router, Head} from '@inertiajs/react';
-import {useMemo, useState, useEffect} from 'react';
+import {React, useMemo, useState, useEffect} from 'react';
 import {VariationTypeOption} from '@/types';
 import {arraysAreEqual} from '@/helpers';
 
@@ -13,11 +12,6 @@ function Show({product, variationOptions}: {
   product: Product,
   variationOptions: number[]
 }) {
-  const page = usePage();
-  const { totalPrice, totalQuantity, cartItems, debug } = page.props;
-
-  // Теперь можно логировать
-  console.log('Debug cart:', { totalPrice, totalQuantity, cartItems, debug });
 
   // If product null or undefined
   if (!product) {
@@ -73,7 +67,7 @@ function Show({product, variationOptions}: {
   useEffect(() => {
     for (let type of product.variationTypes) {
       const selectedOptionId: number = variationOptions[type.id];
-      console.log(selectedOptionId, type.options)
+      // console.log(selectedOptionId, type.options)
       chooseOption(
         type.id,
         type.options.find((op) => op.id == selectedOptionId) || type.options[0],
@@ -186,7 +180,7 @@ function Show({product, variationOptions}: {
       Object.entries(selectedOptions)
       .map(([typeId, option]: [string, VariationTypeOption]) => [typeId, option.id])
     )
-    console.log(idsMap)
+    // console.log(idsMap)
     form.setData('option_ids', idsMap)
   }, [selectedOptions]);
 

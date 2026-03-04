@@ -2,28 +2,29 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\RolesEnum;
 use Filament\Forms;
 use Filament\Tables;
+use App\Enums\RolesEnum;
 use Filament\Forms\Form;
 use App\Models\Department;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Checkbox;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\DepartmentResource\Pages;
 use App\Filament\Resources\DepartmentResource\RelationManagers;
-use Filament\Facades\Filament;
-use Filament\Tables\Columns\TextColumn;
+use App\Filament\Resources\DepartmentResource\RelationManagers\CategoriesRelationManager;
 
 class DepartmentResource extends Resource
 {
     protected static ?string $model = Department::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'iconsax-bol-element-3';
 
     public static function form(Form $form): Form
     {
@@ -66,7 +67,7 @@ class DepartmentResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            CategoriesRelationManager::class
         ];
     }
 

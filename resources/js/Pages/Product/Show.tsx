@@ -1,5 +1,4 @@
 import {Product} from '@/types';
-import ProductItem from '@/Components/App/ProductItem';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import CurrencyFormatter from '@/Components/Core/CurrencyFormatter';
 import Carousel from '@/Components/Core/Carousel';

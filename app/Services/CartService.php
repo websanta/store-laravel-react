@@ -297,4 +297,43 @@ class CartService
             ])
             ->toArray();
     }
+
+    // Moving Cart Items from Cookies to DB on Auth
+    public function moveCartItemsToDatabase($userId)
+    {
+        // Get cart items from cookies
+        $cartItems = $this->getCartItemsFromCookies();
+
+        // Receive all the user's products
+        $userCartItems = CartItem::where('user_id', $userId)->get();
+
+        // Loop through cart items and insert them to DB
+        foreach ($cartItems as $cartItem) {
+            // Check if the cart item already exists for the user
+            $existingItem = $userCartItems->first(function ($item) use ($cartItem) {
+                return $item->product_id == $cartItem['product_id']
+                    && $item->variation_type_option_ids == $cartItem['option_ids'];
+            });
+
+            if ($existingItem) {
+                // If the Item exists, update the quantity
+                $existingItem->update([
+                    'quantity' => $existingItem->quantity + $cartItem['quantity'],
+                    'price' => $cartItem['price']   // Optional: Update price if needed
+                ]);
+            } else {
+                // If the item doesn't exist, create a new record
+                CartItem::create([
+                    'user_id' => $userId,
+                    'product_id' => $cartItem['product_id'],
+                    'quantity' => $cartItem['quantity'],
+                    'price' => $cartItem['price'],
+                    'variation_type_option_ids' => $cartItem['option_ids']
+                ]);
+            }
+        }
+
+        // Clear the cart items from cookies
+        Cookie::queue(self::COOKIE_NAME, '', -1);
+    }
 }

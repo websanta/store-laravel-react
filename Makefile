@@ -32,6 +32,7 @@ install: ## Initial project installation (complete setup)
 	@make migrate
 	@make storage-link
 	@make start-vite
+	@make stripe-setup
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Installation complete!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
@@ -395,3 +396,68 @@ info: ## Show system information
 	@echo "  $(BLUE)pgAdmin:$(NC)      http://localhost:5050"
 	@echo "  $(BLUE)Vite Dev:$(NC)     http://localhost:5174"
 	@echo "$(GREEN)============================================$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Stripe Commands:$(NC)"
+	@echo "  make stripe           - Access Stripe CLI shell"
+	@echo "  make stripe-logs      - View Stripe logs"
+	@echo "  make stripe-webhooks  - Listen to webhooks"
+	@echo "  make stripe-trigger   - Trigger test events"
+	@echo "$(GREEN)============================================$(NC)"
+
+# Stripe CLI commands
+stripe: ## Access Stripe CLI container shell
+	@docker compose -f $(COMPOSE_FILE) exec stripe sh
+
+stripe-logs: ## Show Stripe CLI logs
+	@docker compose -f $(COMPOSE_FILE) logs -f stripe
+
+stripe-dashboard: ## Open Stripe local dashboard
+	@echo "$(YELLOW)Starting Stripe local dashboard...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec -d stripe stripe dashboard
+	@sleep 3
+	@echo "$(GREEN)Stripe dashboard is available at http://localhost:8080$(NC)"
+	@xdg-open http://localhost:8080 2>/dev/null || open http://localhost:8080 2>/dev/null || echo "Please open http://localhost:8080 manually"
+
+stripe-trigger: ## Trigger a test webhook event (use EVENT=payment_intent.succeeded)
+	@if [ -z "$(EVENT)" ]; then \
+		echo "$(RED)Error: Please specify EVENT=event_name$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Triggering $(EVENT) event...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec stripe stripe trigger $(EVENT)
+
+stripe-login: ## Login to Stripe CLI (one-time setup)
+	@echo "$(YELLOW)Follow the instructions to log in to Stripe...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec stripe stripe login
+
+stripe-customers: ## List customers
+	@docker compose -f $(COMPOSE_FILE) exec stripe stripe customers list
+
+stripe-payments: ## List payments
+	@docker compose -f $(COMPOSE_FILE) exec stripe stripe payments list
+
+stripe-products: ## List products
+	@docker compose -f $(COMPOSE_FILE) exec stripe stripe products list
+
+stripe-prices: ## List prices
+	@docker compose -f $(COMPOSE_FILE) exec stripe stripe prices list
+
+stripe-setup: ## Initial Stripe setup (run once)
+	@echo "$(YELLOW)Setting up Stripe CLI...$(NC)"
+	@if [ ! -f .env ]; then \
+		echo "$(RED)Error: .env file not found. Please create it first.$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Please add these variables to your .env file:$(NC)"
+	@echo "  STRIPE_KEY=pk_test_your_publishable_key"
+	@echo "  STRIPE_SECRET=sk_test_your_secret_key"
+	@echo "  STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret"
+	@echo ""
+	@read -p "Have you added the Stripe keys to .env? (y/N) " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		make stripe-login; \
+		echo "$(GREEN)Stripe setup complete!$(NC)"; \
+	else \
+		echo "$(YELLOW)Please add Stripe keys to .env and run 'make stripe-login' manually$(NC)"; \
+	fi

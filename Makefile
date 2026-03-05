@@ -17,7 +17,7 @@ help: ## Show this help message
 install: ## Initial project installation (complete setup)
 	@echo "$(YELLOW)Starting complete project installation...$(NC)"
 	@make setup
-	@make build
+	@make dbuild
 	@make up
 	@echo "$(YELLOW)Waiting for containers to be ready...$(NC)"
 	@sleep 10
@@ -54,8 +54,7 @@ setup: ## Setup environment file
 
 dev: ## Start development environment
 	@echo "$(YELLOW)Starting development environment...$(NC)"
-	@make up
-	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
+	@make up-dev
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Development environment started!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
@@ -79,7 +78,7 @@ build-watch: ## Build assets with watch mode
 build: ## Full production build (composer + npm)
 	@echo "$(YELLOW)Starting full production build...$(NC)"
 	@make composer-install
-	@make npm-build
+	@make fbuild
 	@make optimize
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Production build complete!$(NC)"
@@ -94,7 +93,7 @@ deploy-prepare: ## Prepare application for deployment
 	@echo "$(YELLOW)Preparing application for deployment...$(NC)"
 	@make cache-clear
 	@make composer-install
-	@make npm-build
+	@make fbuild
 	@make optimize
 	@echo "$(GREEN)Application ready for deployment!$(NC)"
 
@@ -109,6 +108,19 @@ dbuild-quick: ## Build Docker containers (with cache)
 up: ## Start Docker containers
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) up -d
+	@echo "$(GREEN)Containers started!$(NC)"
+	@make ps
+
+up-dev: ## Start Docker containers
+	@echo "$(YELLOW)Starting Docker containers...$(NC)"
+	docker compose -f $(COMPOSE_FILE) --profile dev up -d
+	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
+	@echo "$(GREEN)Containers started!$(NC)"
+	@make ps
+
+up-prod: ## Start Docker containers
+	@echo "$(YELLOW)Starting Docker containers...$(NC)"
+	docker compose -f $(COMPOSE_FILE) --profile prod up -d
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 

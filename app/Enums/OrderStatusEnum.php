@@ -5,6 +5,7 @@ namespace App\Enums;
 enum OrderStatusEnum: string
 {
     case Draft = 'draft';
+    case Processing = 'processing';
     case Paid = 'paid';
     case Shipped = 'shipped';
     case Delivered = 'delivered';
@@ -14,6 +15,7 @@ enum OrderStatusEnum: string
     {
         return [
             self::Draft->value => __('Draft'),
+            self::Processing->value => __('Processing'),
             self::Paid->value => __('Paid'),
             self::Shipped->value => __('Shipped'),
             self::Delivered->value => __('Delivered'),

@@ -80,6 +80,8 @@ export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
     csrf_token: string;
+    success: string;
+    error: string;
     auth: {
         user: User;
     };

@@ -10,21 +10,35 @@ export default function AuthenticatedLayout({
     header,
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
+    const props = usePage().props;
     const user = usePage().props.auth.user;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
 
+      console.log('All props:', props);
+console.log('Success:', props.success);
+console.log('From checkout:', props.from_checkout);
+
     return (
         <div className="min-h-screen bg-gray-100">
           <Navbar />
-            {header && (
-                <header className="bg-white shadow">
-                    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                        {header}
-                    </div>
-                </header>
-            )}
+
+          {props.success && props.from_checkout &&
+            <div className="container mx-auto px-8 mt-8">
+              <div className="alert alert-success">
+                {props.success}
+              </div>
+            </div>
+          }
+
+          {props.error &&
+            <div className="container mx-auto px-8 mt-8">
+              <div className="alert alert-error">
+                {props.error}
+              </div>
+            </div>
+          }
 
             <main>{children}</main>
         </div>

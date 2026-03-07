@@ -41,9 +41,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'success' => session('success'),
+            'success' => [
+                'message' => session('success'),
+                'time' => microtime(true),
+            ],
             'error' => session('error'),
-            'from_checkout' => session('from_checkout'),
+            // 'from_checkout' => session('from_checkout'),
             'totalPrice' => $totalPrice,
             'totalQuantity' => $totalQuantity,
             'miniCartItems' => $cartItems,

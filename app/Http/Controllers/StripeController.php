@@ -3,29 +3,47 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatusEnum;
+use App\Http\Resources\OrderViewResource;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 use Stripe\StripeClient;
 
 class StripeController extends Controller
 {
-    public function success()
+    public function success(Request $request)
     {
-        return view('stripe.success');
+        $user = auth()->user();
+        $session_id = $request->get('session_id');
+        $orders = Order::where('stripe_session_id', $session_id)->get();
+        if ($orders->count() === 0) {
+            abort(404);
+        }
+
+        foreach ($orders as $order) {
+            if ($order->user_id !== $user->id) {
+                abort(403);
+            }
+        }
+
+        return Inertia::render('Stripe/Success', [
+            'orders' => OrderViewResource::collection($orders)->collection->toArray()
+        ]);
     }
 
     public function failure()
     {
-        return view('stripe.success');
+        return Inertia::render('Stripe/Failure');
+        // return redirect()->route('dashboard')->with('error', 'Stripe payment failed!');
     }
 
     public function webhook(Request $request)
     {
         $stripe = new StripeClient(config('app.stripe_secret_key'));
-        $endpoint_secret = config('app.stripe_endpoint_secret');
+        $webhook_secret = config('app.stripe_webhook_secret');
         $payload = $request->getContent();
         $sig_header = request()->header('Stripe-Signature');
         $event = null;
@@ -34,7 +52,7 @@ class StripeController extends Controller
             $event = \Stripe\Webhook::constructEvent(
                 $payload,
                 $sig_header,
-                $endpoint_secret
+                $webhook_secret
             );
         } catch (\UnexpectedValueException $e) {
             Log::error($e);

@@ -47,6 +47,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    profiles:
+      - dev
+      - prod
 
   # Nginx web server
   nginx:
@@ -74,6 +77,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    profiles:
+      - dev
+      - prod
 
   # Node.js for Vite development server
   node:
@@ -99,6 +105,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    profiles:
+      - dev
 
   # PostgreSQL database
   postgres:
@@ -121,6 +129,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles:
+      - dev
 
   # pgAdmin for database management
   pgadmin:
@@ -140,6 +150,8 @@ services:
       - store_network
     depends_on:
       - postgres
+    profiles:
+      - dev
 
   # Redis for caching and sessions
   redis:
@@ -158,6 +170,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles:
+      - dev
+      - prod
 
   # Mailpit for email testing
   mailpit:
@@ -177,6 +192,36 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    profiles:
+      - dev
+
+   # Stripe CLI for webhook testing and payment processing
+  stripe:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/stripe/Dockerfile
+    container_name: store_stripe
+    restart: unless-stopped
+    command: listen --api-key ${STRIPE_SECRET_KEY} --forward-to https://store_nginx/stripe/webhook --skip-verify
+    environment:
+      - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
+    volumes:
+      - stripe_config:/root/.config/stripe
+    networks:
+      - store_network
+    depends_on:
+      - store
+      - nginx
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "stripe", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - dev
 
 networks:
   store_network:
@@ -192,4 +237,6 @@ volumes:
   node_modules:
     driver: local
   nginx_logs:
+    driver: local
+  stripe_config:
     driver: local

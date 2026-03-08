@@ -21,7 +21,9 @@ Route::controller(CartController::class)->group(function () {
     Route::delete('/cart/{product}', 'destroy')->name('cart.destroy');
 });
 
-Route::post('/stripe/webhook', [CartController::class, 'webhook'])->name('stripe.webhook');
+Route::post('/stripe/webhook', [StripeController::class, 'webhook'])
+    ->name('stripe.webhook')
+    ->withoutMiddleware([VerifyCsrfToken::class]);
 
 // Auth routes
 Route::middleware('auth')->group(function () {
@@ -34,7 +36,6 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/stripe/success', [StripeController::class, 'success'])->name('stripe.success');
         Route::get('/stripe/failure', [StripeController::class, 'failure'])->name('stripe.failure');
-        Route::post('/stripe/webhook', [StripeController::class, 'webhook'])->name('stripe.webhook');
     });
 });
 

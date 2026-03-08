@@ -124,9 +124,14 @@ up-prod: ## Start Docker containers
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
-down: ## Stop Docker containers
+ddown: ## Stop Docker containers
 	@echo "$(YELLOW)Stopping Docker containers...$(NC)"
-	docker compose -f $(COMPOSE_FILE) down
+	docker compose -f $(COMPOSE_FILE) --profile dev down
+	@echo "$(GREEN)Containers stopped!$(NC)"
+
+pdown: ## Stop Docker containers
+	@echo "$(YELLOW)Stopping Docker containers...$(NC)"
+	docker compose -f $(COMPOSE_FILE) --profile prod down
 	@echo "$(GREEN)Containers stopped!$(NC)"
 
 down-v: ## Stop and remove all containers with volumes

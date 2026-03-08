@@ -38,7 +38,7 @@ class CheckoutCompleted extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'mail.checkout_completed',
+            markdown: 'mail.checkout_completed',
         );
     }
 

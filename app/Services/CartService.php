@@ -153,7 +153,7 @@ class CartService
 
         $cartItem = CartItem::where('user_id', $userId)
             ->where('product_id', $productId)
-            ->where('variation_type_option_ids', json_encode($optionIds))
+            ->whereOptionIds($optionIds)
             ->first();
 
         if ($cartItem) {
@@ -187,7 +187,7 @@ class CartService
 
         $cartItem = CartItem::where('user_id', $userId)
             ->where('product_id', $productId)
-            ->where('variation_type_option_ids', json_encode($optionIds))
+            ->whereOptionIds($optionIds)
             ->first();
 
         if ($cartItem) {
@@ -239,7 +239,7 @@ class CartService
 
         CartItem::where('user_id', $userId)
             ->where('product_id', $productId)
-            ->where('variation_type_option_ids', json_encode($optionIds))
+            ->whereOptionIds($optionIds)
             ->delete();
     }
 
@@ -335,5 +335,19 @@ class CartService
 
         // Clear the cart items from cookies
         Cookie::queue(self::COOKIE_NAME, '', -1);
+    }
+
+    public function clearCart()
+    {
+        if (Auth::check()) {
+            CartItem::where('user_id', Auth::id())->delete();
+        } else {
+            Cookie::queue(self::COOKIE_NAME, '', -1);
+        }
+
+        // Сбрасываем кэш
+        $this->cachedCartItems = null;
+
+        return $this;
     }
 }

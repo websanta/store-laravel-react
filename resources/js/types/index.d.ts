@@ -1,3 +1,4 @@
+import { OrderItem } from './index.d';
 export interface User {
     id: number;
     name: string;
@@ -80,6 +81,11 @@ export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
     csrf_token: string;
+    success: {
+      message: string;
+      time: number;
+    };
+    error: string;
     auth: {
         user: User;
     };
@@ -87,3 +93,32 @@ export type PageProps<
     totalPrice: number;
     miniCartItems: CartItem[];
 };
+
+export type OrderItem = {
+  id: number;
+  quantity: number;
+  price: number;
+  variation_type_option_ids: number[];
+  product: {
+    id: number;
+    title: string;
+    slug: string;
+    description: string;
+    image: string;
+  }
+}
+
+export type Order = {
+  id: number;
+  total_price: number;
+  status: string;
+  created_at: string;
+  vendorUser: {
+    id: number;
+    name: string;
+    email: string;
+    store_name: string;
+    store_address: string;
+  };
+  OrderItems: OrderItem[]
+}

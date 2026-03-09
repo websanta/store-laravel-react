@@ -123,4 +123,11 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'currency' => env('APP_CURRENCY', 'USD'),
+
+    'payment_driver' => env('PAYMENT_DRIVER'),
+    'stripe_secret_key' => env('STRIPE_SECRET_KEY'),
+    'stripe_webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+
+    'platform_fee_pct' => 10
 ];

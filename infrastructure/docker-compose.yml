@@ -185,6 +185,8 @@ services:
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - mailpit_data:/data
     networks:
       - store_network
     healthcheck:
@@ -237,6 +239,8 @@ volumes:
   node_modules:
     driver: local
   nginx_logs:
+    driver: local
+  mailpit_data:
     driver: local
   stripe_config:
     driver: local

@@ -12,7 +12,7 @@ export default function SecondaryButton({
             {...props}
             type={type}
             className={
-                `btn px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200 ` + className
+                `btn px-4 bg-gray-200 hover:bg-gray-300 transition-colors duration-200` + className
             }
             disabled={disabled}
         >

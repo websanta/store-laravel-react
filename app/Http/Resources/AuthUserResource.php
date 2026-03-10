@@ -30,7 +30,7 @@ class AuthUserResource extends JsonResource
             // 'stripe_account_active' => (bool)$this->stripe_account_active,
             'vendor' => !$this->vendor ? null : [
                 'status' => $this->vendor->status,
-                'status_label' => VendorStatusEnum::from($this->vendor->status)->labels(),
+                'status_label' => VendorStatusEnum::from($this->vendor->status)->label(),
                 'store_name' => $this->vendor->store_name,
                 'store_address' => $this->vendor->store_address,
                 'cover_image' => $this->vendor->cover_image

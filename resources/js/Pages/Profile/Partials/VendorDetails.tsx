@@ -8,7 +8,7 @@ import TextInput from "@/Components/Core/TextInput";
 import InputError from "@/Components/Core/InputError";
 
 export default function VendorDetails(
-  {className = '',}: { className?: string }
+  {className = ''}: { className?: string }
 ) {
   const [showBecomeVendorConfirmation, setShowBecomeVendorConfirmation] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -23,12 +23,12 @@ export default function VendorDetails(
     processing,
     recentlySuccessful,
   } = useForm({
-    store_name: user.vendor?.store_name || user.name,
+    store_name: user.vendor?.store_name || user.name.toLowerCase().replace(/\s+/g, '-'),
     store_address: user.vendor?.store_address
   });
 
   const onStoreNameChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
-    setData('store_name', ev.target.value.toLowerCase().replace(/\s+/g, '-'))
+    setData('store_name', ev.target.value.replace(/\s+/g, '-'))
   };
 
   const becomeVendor: FormEventHandler = (ev) => {
@@ -110,7 +110,7 @@ export default function VendorDetails(
                 <InputLabel htmlFor="name" value="Store Address"/>
 
                 <textarea
-                  className="textarea textarea-bordered w-full mt-1"
+                  className="textarea border rounded-md w-full mt-1 p-2"
                   value={data.store_address}
                   onChange={(e) => setData('store_address', e.target.value)}
                   placeholder="Enter Your Store Address"></textarea>

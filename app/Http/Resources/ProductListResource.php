@@ -24,7 +24,8 @@ class ProductListResource extends JsonResource
             'image' => $this->getFirstImageUrl(),
             'user' => [
                 'id' => $this->user->id,
-                'name' => $this->user->name
+                'name' => $this->user->name,
+                'store_name' => $this->user->vendor->store_name
             ],
             'department' => [
                 'id' => $this->department->id,

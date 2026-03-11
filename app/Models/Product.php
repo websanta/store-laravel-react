@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProductStatusEnum;
+use App\Enums\VendorStatusEnum;
 use App\Models\Category;
 use App\Models\Department;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,12 +37,19 @@ class Product extends Model implements HasMedia
 
     public function scopePublished(Builder $query): Builder
     {
-        return $query->where('status', ProductStatusEnum::Published);
+        return $query->where('products.status', ProductStatusEnum::Published);
     }
 
     public function scopeForWebsite(Builder $query): Builder
     {
-        return $query->published();
+        return $query->published()->vendorApproved();
+    }
+
+    public function scopeVendorApproved(Builder $query): Builder
+    {
+        return $query
+            ->join('vendors', 'products.created_by', '=', 'vendors.user_id')
+            ->where('vendors.status', VendorStatusEnum::Approved->value);
     }
 
     public function user(): BelongsTo

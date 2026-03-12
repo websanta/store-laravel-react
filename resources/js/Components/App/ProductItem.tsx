@@ -39,7 +39,7 @@ export default function ProductItem({product}: {product: Product}) {
           by <Link href={route('vendor.profile', product.user.store_name)} className="hover:underline">
             {product.user.name}
           </Link>&nbsp;
-          in <Link href="/" className="hover:underline">{product.department.name}</Link>&nbsp;
+          in <Link href={route('product.byDepartment', product.department.slug)} className="hover:underline">{product.department.name}</Link>&nbsp;
         </p>
         <div className="card-actions items-center justify-between mt-3">
           <button onClick={addToCart} className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">Add to Cart</button>

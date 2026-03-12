@@ -53,6 +53,7 @@ export type Product = {
   department: {
     id: number;
     name: string;
+    slug: string;
   };
   variationTypes: VariationType[],
   variations: Array<{
@@ -89,6 +90,7 @@ export type PaginationProps<T> = {
 export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
+    appName: string;
     csrf_token: string;
     success: {
       message: string;
@@ -101,6 +103,7 @@ export type PageProps<
     totalQuantity: number;
     totalPrice: number;
     miniCartItems: CartItem[];
+    departments: Department[];
 };
 
 export type OrderItem = {
@@ -136,4 +139,18 @@ export type Vendor = {
   id: number;
   store_name: string;
   store_address: string;
+}
+
+export type Category = {
+  id: number;
+  name: string;
+}
+
+export type Department = {
+  id: number;
+  name: string;
+  slug: string;
+  meta_title: string;
+  meta_description: string;
+  categories: Category[]
 }

@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\DepartmentResource;
 use App\Http\Resources\AuthUserResource;
 use App\Services\CartService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use App\Models\Department;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -35,9 +37,13 @@ class HandleInertiaRequests extends Middleware
         $totalQuantity = $cartService->getTotalQuantity();
         $totalPrice = $cartService->getTotalPrice();
         $cartItems = $cartService->getCartItems();
+        $departments = Department::published()
+            ->with('categories')
+            ->get();
 
         return [
             ...parent::share($request),
+            'appName' => config('app.name'),
             'csrf_token' => csrf_token(),
             'auth' => [
                 'user' => $request->user() ? new AuthUserResource($request->user()) : null,
@@ -51,6 +57,8 @@ class HandleInertiaRequests extends Middleware
             'totalPrice' => $totalPrice,
             'totalQuantity' => $totalQuantity,
             'miniCartItems' => $cartItems,
+            'departments' => DepartmentResource::collection($departments)
+                ->collection->toArray(),
         ];
     }
 }

@@ -104,6 +104,7 @@ export type PageProps<
     totalPrice: number;
     miniCartItems: CartItem[];
     departments: Department[];
+    keyword: string;
 };
 
 export type OrderItem = {

@@ -13,10 +13,18 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function home()
+    public function home(Request $request)
     {
+        $keyword = $request->query('keyword');
+
         $products = Product::query()
             ->forWebsite()
+            ->when($keyword, function ($query, $keyword) {
+                $query->where(function ($query) use ($keyword) {
+                    $query->where('title', 'ilike', "%{$keyword}%")
+                        ->orWhere('description', 'ilike', "%{$keyword}%");
+                });
+            })
             ->paginate(12);
         return Inertia::render('Home', [
             'products' => ProductListResource::collection($products)
@@ -43,15 +51,14 @@ class ProductController extends Controller
             ->where('department_id', $department->id)
             ->when($keyword, function ($query, $keyword) {
                 $query->where(function ($query) use ($keyword) {
-                    $query->where('title', 'like', "%{$keyword}%")
-                        ->orWhere('description', 'like', "%{$keyword}%");
+                    $query->where('title', 'ilike', "%{$keyword}%")
+                        ->orWhere('description', 'ilike', "%{$keyword}%");
                 });
             })
             ->paginate();
         return Inertia::render('Department/Index', [
             'department' => new DepartmentResource($department),
             'products' => ProductListResource::collection($products),
-            'keyword' => $keyword
         ]);
     }
 }

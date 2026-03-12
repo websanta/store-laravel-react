@@ -1,6 +1,9 @@
 import React from 'react'
-import { Link, router, usePage } from '@inertiajs/react'
+import { FormEventHandler } from 'react'
+import { Link, router, usePage, useForm } from '@inertiajs/react'
 import MiniCartDropdown from './MiniCartDropdown';
+import { PageProps } from "@/types";
+import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
 const handleLogout = (e) => {
   e.preventDefault();
@@ -8,8 +11,21 @@ const handleLogout = (e) => {
 };
 
 export function Navbar() {
-  const { auth, departments, totalQuantity } = usePage().props;
-  const user = auth.user;
+  const { auth, departments, totalQuantity, keyword } = usePage().props;
+  const { user } = auth;
+
+  const searchForm = useForm <{
+    keyword: string;
+  }>({
+    keyword: keyword || '',
+  });
+  const {url} = usePage();
+
+  const onSubmit: FormEventHandler = (e) => {
+    e.preventDefault();
+    searchForm.get(url);
+  }
+
   return (
     <>
       <div className="navbar bg-base-100 shadow-sm">
@@ -17,6 +33,23 @@ export function Navbar() {
           <Link href="/" className="btn btn-ghost text-xl">Store</Link>
         </div>
         <div className="flex gap-4">
+
+          <form onSubmit={onSubmit} className="join border rounded-md flex-1">
+            <div className="flex-1">
+              <input
+                value={searchForm.data.keyword}
+                onChange={(e) =>
+                  searchForm.setData('keyword', e.target.value)}
+                className="input join-item focus:outline-none px-2 w-full" placeholder="Search" />
+            </div>
+            <div className="indicator">
+              <button className="btn join-item bg-gray-50 hover:bg-gray-200 transition-colors duration-200 p-4">
+                <MagnifyingGlassIcon className={'size-4'} />
+                Search
+              </button>
+            </div>
+          </form>
+
           <div className="dropdown dropdown-end">
             <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
               <div className="indicator">
@@ -26,7 +59,7 @@ export function Navbar() {
                 </span>
               </div>
             </div>
-            <MiniCartDropdown />
+            <MiniCartDropdown/>
           </div>
 
           {user &&

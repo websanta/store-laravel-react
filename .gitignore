@@ -9,6 +9,7 @@
 /storage/logs/*.log
 .env
 .env.backup
+.env.testing
 .env.production
 .phpunit.result.cache
 .pest/

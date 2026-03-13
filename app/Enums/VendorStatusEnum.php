@@ -29,7 +29,7 @@ enum VendorStatusEnum: string
     public static function colors(): array
     {
         return [
-            'gray' => self::Pending->value,
+            'warning' => self::Pending->value,
             'success' => self::Approved->value,
             'danger' => self::Rejected->value,
         ];

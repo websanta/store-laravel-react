@@ -485,17 +485,25 @@ stripe-setup: ## Initial Stripe setup (run once)
 # Testing commands
 test-db-create: ## Create test database
 	@echo "$(YELLOW)Creating test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -c "CREATE DATABASE store_test WITH OWNER store_user;" || echo "$(BLUE)Database may already exist$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d postgres -c "CREATE DATABASE store_test WITH OWNER store_user;" || echo "$(BLUE)Database may already exist$(NC)"
 	@echo "$(GREEN)Test database ready!$(NC)"
+
+test-db-connect: ## Connect to test database
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d store_test
 
 test-db-drop: ## Drop test database
 	@echo "$(YELLOW)Dropping test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -c "DROP DATABASE IF EXISTS store_test;"
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d postgres -c "DROP DATABASE IF EXISTS store_test;"
 	@echo "$(GREEN)Test database dropped!$(NC)"
 
 test-db-recreate: test-db-drop test-db-create ## Recreate test database
 
 test-env: ## Create .env.testing if not exists
+	@if [ ! -f .env ]; then \
+		echo "$(RED)Error: .env file not found!$(NC)"; \
+		echo "$(YELLOW)Please run 'make setup' first$(NC)"; \
+		exit 1; \
+	fi
 	@if [ ! -f .env.testing ]; then \
 		echo "$(YELLOW)Creating .env.testing from .env...$(NC)"; \
 		cp .env .env.testing; \
@@ -505,16 +513,19 @@ test-env: ## Create .env.testing if not exists
 		sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env.testing; \
 		sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env.testing; \
 		sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env.testing; \
-		$(eval DB_PASS := $(shell grep DB_PASSWORD .env | cut -d '=' -f2)) \
-		if [ -z "$(DB_PASS)" ]; then \
+		DB_PASS=$$(grep DB_PASSWORD .env | cut -d '=' -f2); \
+		if [ -z "$$DB_PASS" ]; then \
 			echo "$(RED)Warning: DB_PASSWORD is empty in .env!$(NC)"; \
-			echo "$(YELLOW}Please set a secure password in .env first$(NC)"; \
+			echo "$(YELLOW)Please set a secure password in .env first$(NC)"; \
 			exit 1; \
+		else \
+			echo "$(GREEN)Using password from .env$(NC)"; \
 		fi; \
-		echo "$(GREEN).env.testing created with same password!$(NC)"; \
+		echo "$(GREEN).env.testing created successfully!$(NC)"; \
 	else \
 		echo "$(BLUE).env.testing already exists$(NC)"; \
 	fi
+
 
 test-migrate: ## Run migrations for test database
 	@echo "$(YELLOW)Running migrations for test database...$(NC)"
@@ -523,15 +534,15 @@ test-migrate: ## Run migrations for test database
 
 test-migrate-fresh: ## Fresh migrations for test database
 	@echo "$(YELLOW)Running fresh migrations for test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan migrate:fresh --force
+	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing -e DB_DATABASE=store_test store php artisan migrate:fresh --force
 	@echo "$(GREEN)Fresh migrations complete!$(NC)"
 
 test-migrate-fresh-seed: ## Fresh migrations with seed for test database
 	@echo "$(YELLOW)Running fresh migrations with seed for test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan migrate:fresh --seed --force
+	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing -e DB_DATABASE=store_test store php artisan migrate:fresh --seed --force
 	@echo "$(GREEN)Fresh migrations with seed complete!$(NC)"
 
-test-setup: test-db-create test-env test-migrate-fresh ## Complete test environment setup
+test-setup: test-db-recreate test-env test-migrate-fresh ## Complete test environment setup
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Test environment is ready!$(NC)"
 	@echo "$(YELLOW)Run tests with: make test$(NC)"

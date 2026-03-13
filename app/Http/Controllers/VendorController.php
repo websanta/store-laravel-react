@@ -49,7 +49,7 @@ class VendorController extends Controller
         ]);
         $vendor = $user->vendor ?: new Vendor();
         $vendor->user_id = $user->id;
-        $vendor->status = VendorStatusEnum::Approved->value;
+        $vendor->status = VendorStatusEnum::Pending;
         $vendor->store_name = $request->store_name;
         $vendor->store_address = $request->store_address;
         $vendor->save();

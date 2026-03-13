@@ -23,7 +23,10 @@ export function Navbar() {
 
   const onSubmit: FormEventHandler = (e) => {
     e.preventDefault();
-    searchForm.get(url);
+    searchForm.get(url, {
+      preserveScroll: true,
+      preserveState: true
+    });
   }
 
   return (

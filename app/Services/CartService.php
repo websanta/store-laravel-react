@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\VariationTypeOption;
+use App\Models\VariationTypes;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
@@ -20,10 +21,8 @@ class CartService
 
     public function addItemToCart(Product $product, int $quantity = 1, array $optionIds = null)
     {
-        if ($optionIds === null) {
-            $optionIds = $product->variationTypes
-                ->mapWithKeys(fn(VariationType $type) => [$type->id => $type->options[0]?->id])
-                ->toArray();
+        if (!$optionIds) {
+            $optionIds = $product->getFirstOptionsMap();
         }
 
         $price = $product->getPriceForOptions($optionIds);

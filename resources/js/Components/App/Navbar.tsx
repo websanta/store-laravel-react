@@ -1,6 +1,9 @@
 import React from 'react'
-import { Link, router, usePage } from '@inertiajs/react'
+import { FormEventHandler } from 'react'
+import { Link, router, usePage, useForm } from '@inertiajs/react'
 import MiniCartDropdown from './MiniCartDropdown';
+import { PageProps } from "@/types";
+import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
 const handleLogout = (e) => {
   e.preventDefault();
@@ -8,56 +11,105 @@ const handleLogout = (e) => {
 };
 
 export function Navbar() {
-  const { auth, totalPrice, totalQuantity } = usePage().props;
-  const user = auth.user;
-  return (
-    <div className="navbar bg-base-100 shadow-sm">
-      <div className="flex-1">
-        <Link href="/" className="btn btn-ghost text-xl">Store</Link>
-      </div>
-      <div className="flex gap-4">
-        <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
-            <div className="indicator">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /> </svg>
-              <span className="badge badge-sm indicator-item">
-                {totalQuantity}
-              </span>
-            </div>
-          </div>
-          <MiniCartDropdown />
-        </div>
+  const { auth, departments, totalQuantity, keyword } = usePage().props;
+  const { user } = auth;
 
-        {user &&
-          <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
-            <div className="w-10 rounded-full">
-              <img
-                alt="Tailwind CSS Navbar component"
-                src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+  const searchForm = useForm <{
+    keyword: string;
+  }>({
+    keyword: keyword || '',
+  });
+  const {url} = usePage();
+
+  const onSubmit: FormEventHandler = (e) => {
+    e.preventDefault();
+    searchForm.get(url, {
+      preserveScroll: true,
+      preserveState: true
+    });
+  }
+
+  return (
+    <>
+      <div className="navbar bg-base-100 shadow-sm">
+        <div className="flex-1">
+          <Link href="/" className="btn btn-ghost text-xl">Store</Link>
+        </div>
+        <div className="flex gap-4">
+
+          <form onSubmit={onSubmit} className="join border rounded-md flex-1">
+            <div className="flex-1">
+              <input
+                value={searchForm.data.keyword}
+                onChange={(e) =>
+                  searchForm.setData('keyword', e.target.value)}
+                className="input join-item focus:outline-none px-2 w-full" placeholder="Search" />
             </div>
+            <div className="indicator">
+              <button className="btn join-item bg-gray-50 hover:bg-gray-200 transition-colors duration-200 p-4">
+                <MagnifyingGlassIcon className={'size-4'} />
+                Search
+              </button>
+            </div>
+          </form>
+
+          <div className="dropdown dropdown-end">
+            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+              <div className="indicator">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"> <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /> </svg>
+                <span className="badge badge-sm indicator-item">
+                  {totalQuantity}
+                </span>
+              </div>
+            </div>
+            <MiniCartDropdown/>
           </div>
-          <ul
-            tabIndex="-1"
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
-            <li>
-              <Link href={route('profile.edit')} className="justify-between">
-                Profile
-                <span className="badge">New</span>
-              </Link>
-            </li>
-            <li>
-              <a onClick={handleLogout}>Logout</a>
-            </li>
+
+          {user &&
+            <div className="dropdown dropdown-end">
+            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
+              <div className="w-10 rounded-full">
+                <img
+                  alt="Tailwind CSS Navbar component"
+                  src="/img/profile-icon.webp" />
+              </div>
+            </div>
+            <ul
+              tabIndex="-1"
+              className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+              <li>
+                <Link href={route('profile.edit')} className="justify-between">
+                  Profile
+                  <span className="badge">New</span>
+                </Link>
+              </li>
+              <li>
+                <a onClick={handleLogout}>Logout</a>
+              </li>
+            </ul>
+          </div>
+          }
+          {!user && <>
+            <Link href={route('login')} className="btn">Login</Link>
+            <Link href={route('register')} className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">Register</Link>
+          </>}
+
+        </div>
+      </div>
+
+      <div className={"navbar bg-base-100 border-t min-h-4"}>
+        <div className="navbar-center hidden lg:flex">
+          <ul className="menu menu-horizontal px-1 z-20 py-0">
+            {departments.map(department => (
+              <li key={department.id}>
+                {<Link href={route('product.byDepartment', department.slug)}>
+                  {department.name}
+                </Link>}
+              </li>
+            ))}
           </ul>
         </div>
-        }
-        {!user && <>
-          <Link href={route('login')} className="btn">Login</Link>
-          <Link href={route('register')} className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">Register</Link>
-        </>}
-
       </div>
-    </div>
+    </>
   )
 }

@@ -159,6 +159,9 @@ logs-node: ## Show node container logs
 shell: ## Access store container shell
 	@docker compose -f $(COMPOSE_FILE) exec store sh
 
+tinker: ## Run tinker command in store container
+	docker compose -f $(COMPOSE_FILE) exec store php artisan tinker
+
 shell-root: ## Access store container shell as root
 	@docker compose -f $(COMPOSE_FILE) exec -u root store sh
 
@@ -268,24 +271,6 @@ pest-install: ## Install Pest testing framework (Pest 3.x)
 	@echo "$(YELLOW)Initializing Pest folder structure...$(NC)"
 	docker compose -f $(COMPOSE_FILE) exec store ./vendor/bin/pest --init
 	@echo "$(GREEN)Pest installed and initialized successfully!$(NC)"
-
-# test: ## Run tests with Pest
-# 	@echo "$(YELLOW)Running tests with Pest...$(NC)"
-# 	docker compose -f $(COMPOSE_FILE) exec store php artisan test
-# 	@echo "$(GREEN)Tests complete!$(NC)"
-
-# test-coverage: ## Run tests with coverage
-# 	@echo "$(YELLOW)Running tests with coverage...$(NC)"
-# 	docker compose -f $(COMPOSE_FILE) exec store php artisan test --coverage --min=80
-# 	@echo "$(GREEN)Tests with coverage complete!$(NC)"
-
-# test-filter: ## Run specific test (use FILTER="TestName")
-# 	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --filter=$(FILTER)
-
-# test-parallel: ## Run tests in parallel
-# 	@echo "$(YELLOW)Running tests in parallel...$(NC)"
-# 	docker compose -f $(COMPOSE_FILE) exec store php artisan test --parallel
-# 	@echo "$(GREEN)Parallel tests complete!$(NC)"
 
 storage-link: ## Create storage symbolic link
 	@echo "$(YELLOW)Creating storage link...$(NC)"
@@ -485,15 +470,15 @@ stripe-setup: ## Initial Stripe setup (run once)
 # Testing commands
 test-db-create: ## Create test database
 	@echo "$(YELLOW)Creating test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d postgres -c "CREATE DATABASE store_test WITH OWNER store_user;" || echo "$(BLUE)Database may already exist$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d postgres -c "CREATE DATABASE store_test WITH OWNER user_test;" || echo "$(BLUE)Database may already exist$(NC)"
 	@echo "$(GREEN)Test database ready!$(NC)"
 
 test-db-connect: ## Connect to test database
-	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d store_test
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U user_test -d store_test
 
 test-db-drop: ## Drop test database
 	@echo "$(YELLOW)Dropping test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d postgres -c "DROP DATABASE IF EXISTS store_test;"
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U user_test -d postgres -c "DROP DATABASE IF EXISTS store_test;"
 	@echo "$(GREEN)Test database dropped!$(NC)"
 
 test-db-recreate: test-db-drop test-db-create ## Recreate test database
@@ -529,17 +514,17 @@ test-env: ## Create .env.testing if not exists
 
 test-migrate: ## Run migrations for test database
 	@echo "$(YELLOW)Running migrations for test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan migrate --force
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan migrate --force
 	@echo "$(GREEN)Test database migrations complete!$(NC)"
 
 test-migrate-fresh: ## Fresh migrations for test database
 	@echo "$(YELLOW)Running fresh migrations for test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing -e DB_DATABASE=store_test store php artisan migrate:fresh --force
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --force
 	@echo "$(GREEN)Fresh migrations complete!$(NC)"
 
 test-migrate-fresh-seed: ## Fresh migrations with seed for test database
 	@echo "$(YELLOW)Running fresh migrations with seed for test database...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing -e DB_DATABASE=store_test store php artisan migrate:fresh --seed --force
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --seed --force
 	@echo "$(GREEN)Fresh migrations with seed complete!$(NC)"
 
 test-setup: test-db-recreate test-env test-migrate-fresh ## Complete test environment setup
@@ -550,40 +535,33 @@ test-setup: test-db-recreate test-env test-migrate-fresh ## Complete test enviro
 
 test: ## Run tests
 	@echo "$(YELLOW)Running tests...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan test $(ARGS)
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test $(ARGS)
 	@echo "$(GREEN)Tests complete!$(NC)"
 
 test-coverage: ## Run tests with coverage
 	@echo "$(YELLOW)Running tests with coverage...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan test --coverage $(ARGS)
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --coverage $(ARGS)
 	@echo "$(GREEN)Tests with coverage complete!$(NC)"
 
 test-parallel: ## Run tests in parallel
 	@echo "$(YELLOW)Running tests in parallel...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan test --parallel $(ARGS)
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --parallel $(ARGS)
 	@echo "$(GREEN)Parallel tests complete!$(NC)"
 
 test-filter: ## Run filtered tests (use FILTER=TestName)
 	@echo "$(YELLOW)Running tests with filter: $(FILTER)$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan test --filter=$(FILTER) $(ARGS)
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --filter=$(FILTER) $(ARGS)
 	@echo "$(GREEN)Filtered tests complete!$(NC)"
 
 test-feature: ## Run feature tests
 	@echo "$(YELLOW)Running feature tests...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan test --testsuite=Feature $(ARGS)
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --testsuite=Feature $(ARGS)
 	@echo "$(GREEN)Feature tests complete!$(NC)"
 
 test-unit: ## Run unit tests
 	@echo "$(YELLOW)Running unit tests...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan test --testsuite=Unit $(ARGS)
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --testsuite=Unit $(ARGS)
 	@echo "$(GREEN)Unit tests complete!$(NC)"
-
-test-clear: ## Clear test cache
-	@echo "$(YELLOW)Clearing test cache...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan cache:clear
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan config:clear
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan view:clear
-	@echo "$(GREEN)Test cache cleared!$(NC)"
 
 test-all: test-setup test ## Complete test run: setup + tests
 	@echo "$(GREEN)============================================$(NC)"
@@ -592,4 +570,4 @@ test-all: test-setup test ## Complete test run: setup + tests
 
 test-watch: ## Run tests in watch mode (reruns on file changes)
 	@echo "$(YELLOW)Running tests in watch mode...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec -e APP_ENV=testing store php artisan test --watch
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --watch

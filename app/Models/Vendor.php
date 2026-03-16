@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\VendorStatusEnum;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Vendor extends Model
 {
+    use HasFactory;
+
     protected $primaryKey = 'user_id';
 
     protected $fillable = [
@@ -19,8 +22,8 @@ class Vendor extends Model
         'store_name',
         'store_address',
         'cover_image',
-        'rejection_reason', // Новое поле
-        'verified_at',      // Новое поле
+        'rejection_reason',
+        'verified_at'
     ];
 
     protected $casts = [

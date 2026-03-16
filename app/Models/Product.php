@@ -7,6 +7,7 @@ use App\Enums\VendorStatusEnum;
 use App\Models\Category;
 use App\Models\Department;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,7 +19,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class Product extends Model implements HasMedia
 {
-    use InteractsWithMedia;
+    use HasFactory, InteractsWithMedia;
 
     public function registerMediaConversions(?Media $media = null): void
     {
@@ -45,11 +46,18 @@ class Product extends Model implements HasMedia
         return $query->published()->vendorApproved();
     }
 
+    // public function scopeVendorApproved(Builder $query): Builder
+    // {
+    //     return $query
+    //         ->join('vendors', 'products.created_by', '=', 'vendors.user_id')
+    //         ->where('vendors.status', VendorStatusEnum::Approved->value);
+    // }
+
     public function scopeVendorApproved(Builder $query): Builder
     {
-        return $query
-            ->join('vendors', 'products.created_by', '=', 'vendors.user_id')
-            ->where('vendors.status', VendorStatusEnum::Approved->value);
+        return $query->whereHas('user.vendor', function ($q) {
+            $q->where('status', VendorStatusEnum::Approved->value);
+        });
     }
 
     public function user(): BelongsTo

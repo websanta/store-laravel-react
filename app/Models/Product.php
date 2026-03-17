@@ -46,13 +46,6 @@ class Product extends Model implements HasMedia
         return $query->published()->vendorApproved();
     }
 
-    // public function scopeVendorApproved(Builder $query): Builder
-    // {
-    //     return $query
-    //         ->join('vendors', 'products.created_by', '=', 'vendors.user_id')
-    //         ->where('vendors.status', VendorStatusEnum::Approved->value);
-    // }
-
     public function scopeVendorApproved(Builder $query): Builder
     {
         return $query->whereHas('user.vendor', function ($q) {

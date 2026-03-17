@@ -5,13 +5,12 @@ namespace App\Services;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\VariationTypeOption;
-use App\Models\VariationTypes;
-use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Exception;
 
 class CartService
 {
@@ -19,7 +18,7 @@ class CartService
     protected const COOKIE_NAME = 'cartItems';
     protected const COOKIE_LIFETIME = 60 * 24 * 365;
 
-    public function addItemToCart(Product $product, int $quantity = 1, array $optionIds = null)
+    public function addItemToCart(Product $product, int $quantity = 1, ?array $optionIds = null)
     {
         if (!$optionIds) {
             $optionIds = $product->getFirstOptionsMap();
@@ -70,7 +69,7 @@ class CartService
                     ->keyBy('id');
 
                 $cartItemData = [];
-                foreach ($cartItems as $key => $cartItem) {
+                foreach ($cartItems as $cartItem) {
                     $product = data_get($products, $cartItem['product_id']);
                     if (!$product) continue;
 
@@ -279,9 +278,9 @@ class CartService
 
     protected function getCartItemsFromCookies()
     {
-        $cartItems = json_decode(Cookie::get(self::COOKIE_NAME, '[]'), true);
+        $cartItems = $_COOKIE['cartItems'] ?? '[]';
 
-        return $cartItems;
+        return json_decode($cartItems, true);
     }
 
     public function getCartItemsGrouped()

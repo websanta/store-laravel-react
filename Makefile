@@ -168,6 +168,9 @@ shell-root: ## Access store container shell as root
 shell-node: ## Access node container shell
 	@docker compose -f $(COMPOSE_FILE) exec node sh
 
+shell-redis: ## Access node container shell
+	@docker compose -f $(COMPOSE_FILE) exec redis sh
+
 shell-db: ## Access DB container shell
 	@docker compose -f $(COMPOSE_FILE) exec postgres sh
 

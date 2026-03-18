@@ -20,6 +20,7 @@ class UserSeeder extends Seeder
             "name" => "User",
             "email" => "user@example.com",
         ])->assignRole(RolesEnum::User->value);
+
         User::factory()->create([
             "name" => "Admin",
             "email" => "admin@example.com",
@@ -36,6 +37,18 @@ class UserSeeder extends Seeder
             'user_id' => $vendorUser->id,
             'status' => VendorStatusEnum::Approved,
             'store_name' => 'Vendor-Store'
+        ]);
+
+        $vendorUser = User::factory()->create([
+            "name" => "Apple Vendor",
+            "email" => "avendor@example.com",
+            "password" => Hash::make(env('APP_VENDOR_PASSWORD'))
+        ]);
+        $vendorUser->assignRole(RolesEnum::Vendor->value);
+        Vendor::create([
+            'user_id' => $vendorUser->id,
+            'status' => VendorStatusEnum::Approved,
+            'store_name' => 'Apple-Store'
         ]);
     }
 }

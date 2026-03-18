@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class CategorySeeder extends Seeder
 {
@@ -22,15 +21,6 @@ class CategorySeeder extends Seeder
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
-            [
-                "name" => "Fashion",
-                "department_id" => 2,
-                "parent_id" => null,
-                "active" => true,
-                "created_at" => now(),
-                "updated_at" => now(),
-            ],
-
             // Subcategories of Electronics (depth 1)
             [
                 "name" => "Computers",
@@ -40,7 +30,6 @@ class CategorySeeder extends Seeder
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
-
             // Subcategories of Electronics (depth 1)
             [
                 "name" => "Smartphones",
@@ -50,7 +39,6 @@ class CategorySeeder extends Seeder
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
-
             // Subcategories of Computers (depth 2)
             [
                 "name" => "Laptops",
@@ -60,7 +48,6 @@ class CategorySeeder extends Seeder
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
-
             // Subcategories of Computers (depth 2)
             [
                 "name" => "Desktops",
@@ -70,7 +57,6 @@ class CategorySeeder extends Seeder
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
-
             // Subcategories of Smartphones (depth 2)
             [
                 "name" => "Android",
@@ -80,12 +66,20 @@ class CategorySeeder extends Seeder
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
-
             // Subcategories of Smartphones (depth 2)
             [
                 "name" => "Apple",
                 "department_id" => 1,
                 "parent_id" => 4,
+                "active" => true,
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "name" => "Household appliances",
+                "department_id" => 2,
+                "parent_id" => null,
                 "active" => true,
                 "created_at" => now(),
                 "updated_at" => now(),

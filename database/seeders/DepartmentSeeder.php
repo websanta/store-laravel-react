@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Support\Str;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class DepartmentSeeder extends Seeder
 {
@@ -23,29 +21,15 @@ class DepartmentSeeder extends Seeder
                 "updated_at" => now(),
             ],
             [
-                "name" => "Fashion",
-                "slug" => "fashion",
+                "name" => "Household appliances",
+                "slug" => "household-appliances",
                 "active" => true,
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
             [
-                "name" => "Home, Garden & Tools",
-                "slug" => Str::slug("Home, Garden & Tools"),
-                "active" => true,
-                "created_at" => now(),
-                "updated_at" => now(),
-            ],
-            [
-                "name" => "Books & Audible",
-                "slug" => Str::slug("Books & Audible"),
-                "active" => true,
-                "created_at" => now(),
-                "updated_at" => now(),
-            ],
-            [
-                "name" => "Health & Beauty",
-                "slug" => Str::slug("Health & Beauty"),
+                "name" => "Tools & Accessories",
+                "slug" => "tools-and-accessories",
                 "active" => true,
                 "created_at" => now(),
                 "updated_at" => now(),

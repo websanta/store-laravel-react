@@ -356,7 +356,6 @@ class CartService
             Cookie::queue(self::COOKIE_NAME, '', -1);
         }
 
-        // Сбрасываем кэш
         $this->cachedCartItems = null;
 
         return $this;

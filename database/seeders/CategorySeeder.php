@@ -87,7 +87,7 @@ class CategorySeeder extends Seeder
 
             [
                 "name" => "Tools & Accessories",
-                "department_id" => 2,
+                "department_id" => 3,
                 "parent_id" => null,
                 "active" => true,
                 "created_at" => now(),

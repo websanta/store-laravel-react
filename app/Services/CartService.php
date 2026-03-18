@@ -279,8 +279,9 @@ class CartService
     protected function getCartItemsFromCookies()
     {
         $cartItems = $_COOKIE['cartItems'] ?? '[]';
+        $decoded = json_decode($cartItems, true);
 
-        return json_decode($cartItems, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
     public function getCartItemsGrouped()
@@ -302,11 +303,23 @@ class CartService
         // Get cart items from cookies
         $cartItems = $this->getCartItemsFromCookies();
 
+        // Check if cart items are empty - exit
+        if (empty($cartItems)) {
+            Cookie::queue(self::COOKIE_NAME, '', -1);
+            return;
+        }
+
         // Receive all the user's products
         $userCartItems = CartItem::where('user_id', $userId)->get();
 
         // Loop through cart items and insert them to DB
         foreach ($cartItems as $cartItem) {
+            // Check if the cart item have valid structure
+            if (!is_array($cartItem) || !isset($cartItem['product_id'], $cartItem['quantity'], $cartItem['price'], $cartItem['option_ids'])) {
+                Log::warning('Invalid cart item structure in cookies', ['cartItem' => $cartItem]);
+                continue;
+            }
+
             // Check if the cart item already exists for the user
             $existingItem = $userCartItems->first(function ($item) use ($cartItem) {
                 return $item->product_id == $cartItem['product_id']
@@ -343,7 +356,6 @@ class CartService
             Cookie::queue(self::COOKIE_NAME, '', -1);
         }
 
-        // Сбрасываем кэш
         $this->cachedCartItems = null;
 
         return $this;

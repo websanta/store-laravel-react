@@ -46,13 +46,6 @@ class Product extends Model implements HasMedia
         return $query->published()->vendorApproved();
     }
 
-    // public function scopeVendorApproved(Builder $query): Builder
-    // {
-    //     return $query
-    //         ->join('vendors', 'products.created_by', '=', 'vendors.user_id')
-    //         ->where('vendors.status', VendorStatusEnum::Approved->value);
-    // }
-
     public function scopeVendorApproved(Builder $query): Builder
     {
         return $query->whereHas('user.vendor', function ($q) {
@@ -187,5 +180,10 @@ class Product extends Model implements HasMedia
         return $this->variationTypes
             ->mapWithKeys(fn($type) => [$type->id => $type->options[0]?->id])
             ->toArray();
+    }
+
+    public function images()
+    {
+        return $this->media()->where('collection_name', 'images');
     }
 }

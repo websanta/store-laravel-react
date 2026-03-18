@@ -30,7 +30,7 @@ class ProductImages extends EditRecord
                     ->reorderable()
                     ->appendFiles()
                     ->preserveFilenames()
-                    ->columnSpan(2),
+                    ->columnSpan(2)
             ]);
     }
 

@@ -84,6 +84,15 @@ class CategorySeeder extends Seeder
                 "created_at" => now(),
                 "updated_at" => now(),
             ],
+
+            [
+                "name" => "Tools & Accessories",
+                "department_id" => 2,
+                "parent_id" => null,
+                "active" => true,
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
         ];
 
         DB::table('categories')->insert($categories);

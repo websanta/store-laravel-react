@@ -181,4 +181,9 @@ class Product extends Model implements HasMedia
             ->mapWithKeys(fn($type) => [$type->id => $type->options[0]?->id])
             ->toArray();
     }
+
+    public function images()
+    {
+        return $this->media()->where('collection_name', 'images');
+    }
 }

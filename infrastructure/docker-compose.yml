@@ -181,7 +181,7 @@ services:
       dockerfile: infrastructure/docker/php-fpm/Dockerfile
     container_name: store_queue
     working_dir: /var/www
-    command: php artisan queue:work redis --tries=3 --timeout=90
+    command: php artisan queue:work redis --queue=default,emails --tries=3 --timeout=90
     restart: unless-stopped
     volumes:
       - ../:/var/www

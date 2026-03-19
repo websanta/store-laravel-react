@@ -3,15 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatusEnum;
+use App\Events\OrderPaid;
 use App\Http\Resources\OrderViewResource;
-use App\Mail\CheckoutCompleted;
-use App\Mail\NewOrderMail;
 use App\Models\CartItem;
 use App\Models\Order;
-use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Stripe\StripeClient;
 
@@ -90,34 +87,59 @@ class StripeController extends Controller
 
                 $productsToDeletedFromCart = [];
                 foreach ($orders as $order) {
-                    $order->payment_intent = $pi;
-                    $order->status = OrderStatusEnum::Paid;
-                    $order->save();
 
-                    $productsToDeletedFromCart = [
-                        ...$productsToDeletedFromCart,
-                        ...$order->orderItems->map(fn($item) => $item->product_id)->toArray()
-                    ];
+                    try {
 
-                    // Reduce product quantity
-                    foreach ($order->orderItems as $orderItem) {
-                        /** @var OrderItem $orderItem */
-                        $options = $orderItem->variation_type_option_ids;
-                        $product = $orderItem->product;
+                        $order->payment_intent = $pi;
+                        $order->status = OrderStatusEnum::Paid;
+                        $order->save();
 
-                        if ($options) {
-                            sort($options);
-                            $variation = $product->variations()
-                                ->where('variation_type_option_ids', $options)
-                                ->first();
-                            if ($variation && $variation->quantity !== null) {
-                                $variation->quantity -= $orderItem->quantity;
-                                $variation->save();
+                        $productsToDeletedFromCart = [
+                            ...$productsToDeletedFromCart,
+                            ...$order->orderItems->map(fn($item) => $item->product_id)->toArray()
+                        ];
+
+                        try {
+                            foreach ($order->orderItems as $orderItem) {
+                                $options = $orderItem->variation_type_option_ids;
+                                $product = $orderItem->product;
+
+                                if ($options) {
+                                    $values = array_values($options);
+                                    $variations = $product->variations;
+
+                                    $foundVariation = null;
+                                    foreach ($variations as $variation) {
+                                        $dbOptions = is_string($variation->variation_type_option_ids)
+                                            ? json_decode($variation->variation_type_option_ids, true)
+                                            : $variation->variation_type_option_ids;
+
+                                        if ($dbOptions == $values) {
+                                            $foundVariation = $variation;
+                                            break;
+                                        }
+                                    }
+
+                                    if ($foundVariation && $foundVariation->quantity !== null) {
+                                        $foundVariation->quantity -= $orderItem->quantity;
+                                        $foundVariation->save();
+                                    }
+                                } else if ($product->quantity !== null) {
+                                    $product->quantity -= $orderItem->quantity;
+                                    $product->save();
+                                }
                             }
-                        } else if ($product->quantity !== null) {
-                            $product->quantity -= $orderItem->quantity;
-                            $product->save();
+                        } catch (\Exception $e) {
+                            Log::error('Failed to update quantities but order saved', [
+                                'order_id' => $order->id,
+                                'error' => $e->getMessage()
+                            ]);
                         }
+                    } catch (\Exception $e) {
+                        Log::error('Failed to save order', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage()
+                        ]);
                     }
                 }
 
@@ -166,27 +188,16 @@ class StripeController extends Controller
                     $order->vendor_subtotal = $order->total_price - $order->website_comission - $order->online_payment_comission;
 
                     $order->save();
-
-                    // Send Email to vendors
-                    try {
-                        Mail::to($order->vendorUser)->send(new NewOrderMail($order));
-                        Log::info('Vendor email sent', ['order_id' => $order->id, 'vendor' => $order->vendorUser->email]);
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send vendor email', ['order_id' => $order->id, 'error' => $e->getMessage()]);
-                    }
                 }
 
-                // Send Email to buyer
-                try {
-                    Mail::to($orders[0]->user)->send(new CheckoutCompleted($orders));
-                    Log::info('Customer email sent', ['user' => $orders[0]->user->email]);
-                } catch (\Exception $e) {
-                    Log::error('Failed to send customer email', ['error' => $e->getMessage()]);
-                }
+                event(new OrderPaid(collect($orders), [
+                    'payment_intent' => $paymentIntent,
+                    'transaction_id' => $transactionId
+                ]));
+
                 break;
 
             default:
-                // echo 'Received unknown event type: ' . $event->type;
                 Log::info('Unhandled event type', ['type' => $event->type]);
         }
 

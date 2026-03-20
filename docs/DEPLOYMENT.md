@@ -6,17 +6,12 @@ Complete step-by-step guide for deploying the Multi-Vendor E-Commerce Marketplac
 
 Before starting, ensure you have:
 
-- ✅ VMware Workstation installed on Windows 11
-- ✅ Linux Mint 22 VM created and running
 - ✅ Docker and Docker Compose installed on Linux Mint VM
-- ✅ Git installed on Linux Mint VM
-- ✅ VS Code with Remote-SSH extension on Windows 11
-- ✅ Network connectivity between Windows host and Linux VM
-- ✅ Sufficient disk space (minimum 20GB free on VM)
+- ✅ Git installed
 
-## Part 1: VM Preparation
+## Part 1: Host Preparation
 
-### 1.1 Install Docker on Linux Mint 22
+### 1.1 Install Docker
 
 ```bash
 # Update package index
@@ -131,7 +126,7 @@ ls -la infrastructure/docker/nginx/certs/
 
 ### 2.5 Configure Hosts File
 
-#### On Linux Mint VM:
+#### On Host:
 
 ```bash
 # Edit hosts file
@@ -141,19 +136,6 @@ sudo nano /etc/hosts
 127.0.0.1 vmmint22.local
 
 # Save and exit (Ctrl+X, Y, Enter)
-```
-
-#### On Windows 11 Host:
-
-```powershell
-# Run PowerShell as Administrator
-# Edit hosts file
-notepad C:\Windows\System32\drivers\etc\hosts
-
-# Add this line (replace with your VM's actual IP):
-192.168.1.100 vmmint22.local
-
-# Save and close
 ```
 
 ## Part 3: Laravel Installation
@@ -183,15 +165,7 @@ cp .env.example .env
 # Edit .env file with your settings
 nano .env
 
-# Update these values in .env:
-# APP_URL=https://vmmint22.local
-# DB_CONNECTION=pgsql
-# DB_HOST=postgres
-# DB_DATABASE=store_db
-# DB_USERNAME=store_user
-# DB_PASSWORD=secret
-# REDIS_HOST=redis
-# REDIS_PASSWORD=redis_secret
+# Update necessary values in .env:
 ```
 
 ## Part 4: Build and Start Application

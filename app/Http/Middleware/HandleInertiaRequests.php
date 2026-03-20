@@ -53,7 +53,6 @@ class HandleInertiaRequests extends Middleware
                 'time' => microtime(true),
             ],
             'error' => session('error'),
-            // 'from_checkout' => session('from_checkout'),
             'totalPrice' => $totalPrice,
             'totalQuantity' => $totalQuantity,
             'miniCartItems' => $cartItems,

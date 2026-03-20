@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Services;
+namespace Tests\Feature\Services;
 
 use App\Models\CartItem;
 use App\Models\Product;
@@ -9,7 +9,6 @@ use App\Services\CartService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -63,7 +62,10 @@ class CartServiceTest extends TestCase
 
     public function test_guest_can_get_total_price_from_cookies()
     {
-        $_COOKIE['cartItems'] = json_encode([
+        Auth::shouldReceive('check')->andReturn(false);
+        Auth::shouldReceive('id')->andReturnNull();
+
+        $cookieValue = json_encode([
             '1_[]' => [
                 'id' => Str::uuid(),
                 'product_id' => $this->product1->id,
@@ -73,8 +75,8 @@ class CartServiceTest extends TestCase
             ],
         ]);
 
-        Auth::shouldReceive('check')->andReturn(false);
-        Auth::shouldReceive('id')->andReturnNull();
+        $this->withCookies(['cartItems' => $cookieValue])
+            ->get('/');
 
         $total = $this->cartService->getTotalPrice();
 
@@ -176,11 +178,14 @@ class CartServiceTest extends TestCase
             ],
         ];
 
-        $_COOKIE['cartItems'] = json_encode($cookieCartItems);
+        $cookieValue = json_encode($cookieCartItems);
 
         Cookie::shouldReceive('queue')
             ->with('cartItems', '', -1)
             ->once();
+
+        $this->withCookies(['cartItems' => $cookieValue])
+            ->get('/');
 
         $this->cartService->moveCartItemsToDatabase($this->user->id);
 
@@ -212,11 +217,14 @@ class CartServiceTest extends TestCase
             ],
         ];
 
-        $_COOKIE['cartItems'] = json_encode($cookieCartItems);
+        $cookieValue = json_encode($cookieCartItems);
 
         Cookie::shouldReceive('queue')
             ->with('cartItems', '', -1)
             ->once();
+
+        $this->withCookies(['cartItems' => $cookieValue])
+            ->get('/');
 
         $this->cartService->moveCartItemsToDatabase($this->user->id);
 
@@ -244,11 +252,14 @@ class CartServiceTest extends TestCase
             ],
         ];
 
-        $_COOKIE['cartItems'] = json_encode($cookieCartItems);
+        $cookieValue = json_encode($cookieCartItems);
 
         Cookie::shouldReceive('queue')
             ->with('cartItems', '', -1)
             ->once();
+
+        $this->withCookies(['cartItems' => $cookieValue])
+            ->get('/');
 
         $this->cartService->moveCartItemsToDatabase($this->user->id);
 

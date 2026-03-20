@@ -278,7 +278,8 @@ class CartService
 
     protected function getCartItemsFromCookies()
     {
-        $cartItems = $_COOKIE['cartItems'] ?? '[]';
+        $cartItems = Cookie::get(self::COOKIE_NAME, '[]');
+
         $decoded = json_decode($cartItems, true);
 
         return is_array($decoded) ? $decoded : [];

@@ -4,15 +4,10 @@ Use this checklist to ensure you've completed all necessary setup steps.
 
 ## Pre-Installation
 
-- [ ] VMware Workstation installed on Windows 11
-- [ ] Linux Mint 22 VM created and running
-- [ ] Docker installed on Linux Mint VM (`docker --version`)
+- [ ] Docker installed (`docker --version`)
 - [ ] Docker Compose installed (`docker compose version`)
 - [ ] Git installed (`git --version`)
 - [ ] User added to docker group (`groups $USER` shows docker)
-- [ ] VS Code installed on Windows 11
-- [ ] Remote-SSH extension installed in VS Code
-- [ ] Network connectivity verified between host and VM
 
 ## Project Structure Setup
 

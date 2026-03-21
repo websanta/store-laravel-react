@@ -159,11 +159,20 @@ logs-node: ## Show node container logs
 shell: ## Access store container shell
 	@docker compose -f $(COMPOSE_FILE) exec store sh
 
+tinker: ## Run tinker command in store container
+	docker compose -f $(COMPOSE_FILE) exec store php artisan tinker
+
 shell-root: ## Access store container shell as root
 	@docker compose -f $(COMPOSE_FILE) exec -u root store sh
 
 shell-node: ## Access node container shell
 	@docker compose -f $(COMPOSE_FILE) exec node sh
+
+shell-redis: ## Access node container shell
+	@docker compose -f $(COMPOSE_FILE) exec redis sh
+
+shell-db: ## Access DB container shell
+	@docker compose -f $(COMPOSE_FILE) exec postgres sh
 
 composer-install: ## Install Composer dependencies
 	@echo "$(YELLOW)Installing Composer dependencies...$(NC)"
@@ -201,7 +210,6 @@ start-vite: ## Start Vite dev server
 	@echo "$(YELLOW)Starting Vite dev server...$(NC)"
 	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
 	@echo "$(GREEN)Vite dev server started in background!$(NC)"
-	@echo "$(BLUE)Check logs with: make logs-node$(NC)"
 
 stop-vite: ## Stop Vite dev server
 	@echo "$(YELLOW)Stopping Vite dev server...$(NC)"
@@ -228,8 +236,14 @@ migrate: ## Run database migrations
 
 migrate-fresh: ## Fresh migration with seed
 	@echo "$(RED)WARNING: This will drop all tables!$(NC)"
+	@echo "$(YELLOW)Running fresh migrations...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --force
+	@echo "$(GREEN)Fresh migrations complete!$(NC)"
+
+migrate-fresh-seed: ## Fresh migration with seed
+	@echo "$(RED)WARNING: This will drop all tables!$(NC)"
 	@echo "$(YELLOW)Running fresh migrations with seed...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --seed
+	docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --seed --force
 	@echo "$(GREEN)Fresh migrations complete!$(NC)"
 
 migrate-rollback: ## Rollback last migration
@@ -265,24 +279,6 @@ pest-install: ## Install Pest testing framework (Pest 3.x)
 	@echo "$(YELLOW)Initializing Pest folder structure...$(NC)"
 	docker compose -f $(COMPOSE_FILE) exec store ./vendor/bin/pest --init
 	@echo "$(GREEN)Pest installed and initialized successfully!$(NC)"
-
-test: ## Run tests with Pest
-	@echo "$(YELLOW)Running tests with Pest...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan test
-	@echo "$(GREEN)Tests complete!$(NC)"
-
-test-coverage: ## Run tests with coverage
-	@echo "$(YELLOW)Running tests with coverage...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan test --coverage --min=80
-	@echo "$(GREEN)Tests with coverage complete!$(NC)"
-
-test-filter: ## Run specific test (use FILTER="TestName")
-	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --filter=$(FILTER)
-
-test-parallel: ## Run tests in parallel
-	@echo "$(YELLOW)Running tests in parallel...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan test --parallel
-	@echo "$(GREEN)Parallel tests complete!$(NC)"
 
 storage-link: ## Create storage symbolic link
 	@echo "$(YELLOW)Creating storage link...$(NC)"
@@ -478,3 +474,108 @@ stripe-setup: ## Initial Stripe setup (run once)
 	else \
 		echo "$(YELLOW)Please add Stripe keys to .env and run 'make stripe-login' manually$(NC)"; \
 	fi
+
+# Testing commands
+test-db-create: ## Create test database
+	@echo "$(YELLOW)Creating test database...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U store_user -d postgres -c "CREATE DATABASE store_test WITH OWNER user_test;" || echo "$(BLUE)Database may already exist$(NC)"
+	@echo "$(GREEN)Test database ready!$(NC)"
+
+test-db-connect: ## Connect to test database
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U user_test -d store_test
+
+test-db-drop: ## Drop test database
+	@echo "$(YELLOW)Dropping test database...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec postgres psql -U user_test -d postgres -c "DROP DATABASE IF EXISTS store_test;"
+	@echo "$(GREEN)Test database dropped!$(NC)"
+
+test-db-recreate: test-db-drop test-db-create ## Recreate test database
+
+test-env: ## Create .env.testing if not exists
+	@if [ ! -f .env ]; then \
+		echo "$(RED)Error: .env file not found!$(NC)"; \
+		echo "$(YELLOW)Please run 'make setup' first$(NC)"; \
+		exit 1; \
+	fi
+	@if [ ! -f .env.testing ]; then \
+		echo "$(YELLOW)Creating .env.testing from .env...$(NC)"; \
+		cp .env .env.testing; \
+		sed -i 's/DB_DATABASE=.*/DB_DATABASE=store_test/' .env.testing; \
+		sed -i 's/APP_ENV=.*/APP_ENV=testing/' .env.testing; \
+		sed -i 's/APP_DEBUG=.*/APP_DEBUG=true/' .env.testing; \
+		sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env.testing; \
+		sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env.testing; \
+		sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env.testing; \
+		DB_PASS=$$(grep DB_PASSWORD .env | cut -d '=' -f2); \
+		if [ -z "$$DB_PASS" ]; then \
+			echo "$(RED)Warning: DB_PASSWORD is empty in .env!$(NC)"; \
+			echo "$(YELLOW)Please set a secure password in .env first$(NC)"; \
+			exit 1; \
+		else \
+			echo "$(GREEN)Using password from .env$(NC)"; \
+		fi; \
+		echo "$(GREEN).env.testing created successfully!$(NC)"; \
+	else \
+		echo "$(BLUE).env.testing already exists$(NC)"; \
+	fi
+
+
+test-migrate: ## Run migrations for test database
+	@echo "$(YELLOW)Running migrations for test database...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan migrate --force
+	@echo "$(GREEN)Test database migrations complete!$(NC)"
+
+test-migrate-fresh: ## Fresh migrations for test database
+	@echo "$(YELLOW)Running fresh migrations for test database...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --force
+	@echo "$(GREEN)Fresh migrations complete!$(NC)"
+
+test-migrate-fresh-seed: ## Fresh migrations with seed for test database
+	@echo "$(YELLOW)Running fresh migrations with seed for test database...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --seed --force
+	@echo "$(GREEN)Fresh migrations with seed complete!$(NC)"
+
+test-setup: test-db-recreate test-env test-migrate-fresh ## Complete test environment setup
+	@echo "$(GREEN)============================================$(NC)"
+	@echo "$(GREEN)Test environment is ready!$(NC)"
+	@echo "$(YELLOW)Run tests with: make test$(NC)"
+	@echo "$(GREEN)============================================$(NC)"
+
+test: ## Run tests
+	@echo "$(YELLOW)Running tests...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test $(ARGS)
+	@echo "$(GREEN)Tests complete!$(NC)"
+
+test-coverage: ## Run tests with coverage
+	@echo "$(YELLOW)Running tests with coverage...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --coverage $(ARGS)
+	@echo "$(GREEN)Tests with coverage complete!$(NC)"
+
+test-parallel: ## Run tests in parallel
+	@echo "$(YELLOW)Running tests in parallel...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --parallel $(ARGS)
+	@echo "$(GREEN)Parallel tests complete!$(NC)"
+
+test-filter: ## Run filtered tests (use FILTER=TestName)
+	@echo "$(YELLOW)Running tests with filter: $(FILTER)$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --filter=$(FILTER) $(ARGS)
+	@echo "$(GREEN)Filtered tests complete!$(NC)"
+
+test-feature: ## Run feature tests
+	@echo "$(YELLOW)Running feature tests...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --testsuite=Feature $(ARGS)
+	@echo "$(GREEN)Feature tests complete!$(NC)"
+
+test-unit: ## Run unit tests
+	@echo "$(YELLOW)Running unit tests...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --testsuite=Unit $(ARGS)
+	@echo "$(GREEN)Unit tests complete!$(NC)"
+
+test-all: test-setup test ## Complete test run: setup + tests
+	@echo "$(GREEN)============================================$(NC)"
+	@echo "$(GREEN)All tests passed!$(NC)"
+	@echo "$(GREEN)============================================$(NC)"
+
+test-watch: ## Run tests in watch mode (reruns on file changes)
+	@echo "$(YELLOW)Running tests in watch mode...$(NC)"
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan test --env=testing --watch

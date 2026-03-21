@@ -13,12 +13,12 @@ export default function Home({
             <div className="hero bg-gray-200 h-[300px]">
               <div className="hero-content text-center">
                 <div className="max-w-md">
-                  <h1 className="text-5xl font-bold">Hello there</h1>
+                  <h1 className="text-5xl font-bold">Welcome!</h1>
                   <p className="py-6">
-                    Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem
-                    quasi. In deleniti eaque aut repudiandae et a id nisi.
+                    We believe that great technology should be both powerful and beautiful. That's why every
+                    product in our store is carefully selected for its performance, design, and value.
                   </p>
-                  <button className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">Get Started</button>
+                  <button className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">Shop Now</button>
                 </div>
               </div>
             </div>

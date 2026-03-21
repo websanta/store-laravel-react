@@ -114,9 +114,9 @@ services:
     container_name: store_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_DATABASE:-store_db}
-      POSTGRES_USER: ${DB_USERNAME:-store_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -125,7 +125,7 @@ services:
     networks:
       - store_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-store_user} -d ${DB_DATABASE:-store_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -173,6 +173,29 @@ services:
     profiles:
       - dev
       - prod
+
+  # Queue for background jobs
+  queue:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/php-fpm/Dockerfile
+    container_name: store_queue
+    working_dir: /var/www
+    command: php artisan queue:work redis --queue=default,emails --tries=3 --timeout=90
+    restart: unless-stopped
+    volumes:
+      - ../:/var/www
+    environment:
+      - QUEUE_CONNECTION=redis
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      - redis
+    networks:
+      - store_network
+    profiles:
+    - dev
+    - prod
 
   # Mailpit for email testing
   mailpit:

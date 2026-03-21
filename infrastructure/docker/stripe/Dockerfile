@@ -1,11 +1,11 @@
 FROM stripe/stripe-cli:latest
 
-# Устанавливаем curl для отправки вебхуков
+# Install curl to send webhooks
 RUN apk add --no-cache curl
 
-# Дополнительно можно установить другие полезные утилиты
+# Additional utilities
 RUN apk add --no-cache jq
 
-# Переопределяем entrypoint, чтобы сохранить оригинальное поведение
+# Override entrypoint to preserve the original behavior
 ENTRYPOINT ["stripe"]
 CMD ["--help"]

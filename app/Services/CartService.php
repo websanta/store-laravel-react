@@ -5,12 +5,12 @@ namespace App\Services;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\VariationTypeOption;
-use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Exception;
 
 class CartService
 {
@@ -18,12 +18,10 @@ class CartService
     protected const COOKIE_NAME = 'cartItems';
     protected const COOKIE_LIFETIME = 60 * 24 * 365;
 
-    public function addItemToCart(Product $product, int $quantity = 1, array $optionIds = null)
+    public function addItemToCart(Product $product, int $quantity = 1, ?array $optionIds = null)
     {
-        if ($optionIds === null) {
-            $optionIds = $product->variationTypes
-                ->mapWithKeys(fn(VariationType $type) => [$type->id => $type->options[0]?->id])
-                ->toArray();
+        if (!$optionIds) {
+            $optionIds = $product->getFirstOptionsMap();
         }
 
         $price = $product->getPriceForOptions($optionIds);
@@ -71,7 +69,7 @@ class CartService
                     ->keyBy('id');
 
                 $cartItemData = [];
-                foreach ($cartItems as $key => $cartItem) {
+                foreach ($cartItems as $cartItem) {
                     $product = data_get($products, $cartItem['product_id']);
                     if (!$product) continue;
 
@@ -280,9 +278,11 @@ class CartService
 
     protected function getCartItemsFromCookies()
     {
-        $cartItems = json_decode(Cookie::get(self::COOKIE_NAME, '[]'), true);
+        $cartItems = Cookie::get(self::COOKIE_NAME, '[]');
 
-        return $cartItems;
+        $decoded = json_decode($cartItems, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     public function getCartItemsGrouped()
@@ -304,11 +304,23 @@ class CartService
         // Get cart items from cookies
         $cartItems = $this->getCartItemsFromCookies();
 
+        // Check if cart items are empty - exit
+        if (empty($cartItems)) {
+            Cookie::queue(self::COOKIE_NAME, '', -1);
+            return;
+        }
+
         // Receive all the user's products
         $userCartItems = CartItem::where('user_id', $userId)->get();
 
         // Loop through cart items and insert them to DB
         foreach ($cartItems as $cartItem) {
+            // Check if the cart item have valid structure
+            if (!is_array($cartItem) || !isset($cartItem['product_id'], $cartItem['quantity'], $cartItem['price'], $cartItem['option_ids'])) {
+                Log::warning('Invalid cart item structure in cookies', ['cartItem' => $cartItem]);
+                continue;
+            }
+
             // Check if the cart item already exists for the user
             $existingItem = $userCartItems->first(function ($item) use ($cartItem) {
                 return $item->product_id == $cartItem['product_id']
@@ -345,7 +357,6 @@ class CartService
             Cookie::queue(self::COOKIE_NAME, '', -1);
         }
 
-        // Сбрасываем кэш
         $this->cachedCartItems = null;
 
         return $this;

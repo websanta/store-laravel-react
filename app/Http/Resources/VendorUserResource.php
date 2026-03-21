@@ -7,11 +7,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class VendorUserResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
@@ -20,6 +15,10 @@ class VendorUserResource extends JsonResource
             'email' => $this->email,
             'store_name' => $this->vendor->store_name,
             'store_address' => $this->vendor->store_address,
+            'vendor_status' => $this->vendor->status->value,
+            'vendor_status_label' => $this->vendor->status->label(),
+            'verified_at' => $this->vendor->verified_at,
+            'rejection_reason' => $this->vendor->rejection_reason,
         ];
     }
 }

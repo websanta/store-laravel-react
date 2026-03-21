@@ -4,6 +4,14 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
+    // stripa_account_active: boolean;
+    vendor: {
+      status: string;
+      status_label: string;
+      store_name: string;
+      store_address: string;
+      cover_image: string;
+    }
 }
 
 export type Image = {
@@ -40,10 +48,12 @@ export type Product = {
   user: {
     id: number;
     name: string;
+    store_name: string;
   };
   department: {
     id: number;
     name: string;
+    slug: string;
   };
   variationTypes: VariationType[],
   variations: Array<{
@@ -80,6 +90,7 @@ export type PaginationProps<T> = {
 export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
+    appName: string;
     csrf_token: string;
     success: {
       message: string;
@@ -92,6 +103,8 @@ export type PageProps<
     totalQuantity: number;
     totalPrice: number;
     miniCartItems: CartItem[];
+    departments: Department[];
+    keyword: string;
 };
 
 export type OrderItem = {
@@ -121,4 +134,24 @@ export type Order = {
     store_address: string;
   };
   OrderItems: OrderItem[]
+}
+
+export type Vendor = {
+  id: number;
+  store_name: string;
+  store_address: string;
+}
+
+export type Category = {
+  id: number;
+  name: string;
+}
+
+export type Department = {
+  id: number;
+  name: string;
+  slug: string;
+  meta_title: string;
+  meta_description: string;
+  categories: Category[]
 }

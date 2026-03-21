@@ -2,27 +2,25 @@
 
 namespace App\Filament\Resources;
 
-use Filament\Forms;
-use Filament\Tables;
-use App\Models\Product;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Illuminate\Support\Str;
 use App\Enums\ProductStatusEnum;
-use Filament\Resources\Resource;
-use Filament\Resources\Pages\Page;
-use Filament\Forms\Components\Select;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\RichEditor;
-use Filament\Pages\SubNavigationPosition;
-use Filament\Tables\Filters\SelectFilter;
-use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\ProductResource\Pages;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use App\Filament\Resources\ProductResource\RelationManagers;
 use App\Filament\Resources\ProductResource\Pages\EditProduct;
+use App\Models\Product;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Pages\SubNavigationPosition;
+use Filament\Resources\Pages\Page;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class ProductResource extends Resource
 {
@@ -46,7 +44,7 @@ class ProductResource extends Resource
                     ->live(onBlur: true)
                     ->required()
                     ->afterStateUpdated(
-                        function (string $operation, $state, callable $set) {
+                        function ($state, callable $set) {
                             $set("slug", Str::slug($state));
                         }
                     ),
@@ -112,11 +110,22 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
+                // TextColumn::make('id')
+                //     ->label('ID')
+                //     ->sortable(),
                 SpatieMediaLibraryImageColumn::make('images')
                     ->collection('images')
                     ->limit(1)
                     ->label('Image')
                     ->conversion('thumb'),
+                // ImageColumn::make('thumbnail')
+                //     ->label('Image')
+                //     ->getStateUsing(function ($record) {
+                //         $url = $record->getFirstMediaUrl('images', 'thumb');
+                //         // If there is no media at all, we return null (there will be a placeholder)
+                //         return $url ?: null;
+                //     })
+                //     ->extraImgAttributes(['loading' => 'lazy']),
                 TextColumn::make('title')
                     ->sortable()
                     ->words(10)

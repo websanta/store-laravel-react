@@ -1,588 +1,358 @@
 # Deployment Guide
 
-Complete step-by-step guide for deploying the Multi-Vendor E-Commerce Marketplace application.
-
-## Prerequisites Checklist
-
-Before starting, ensure you have:
-
-- ✅ Docker and Docker Compose installed on Linux Mint VM
-- ✅ Git installed
-
-## Part 1: Host Preparation
-
-### 1.1 Install Docker
-
-```bash
-# Update package index
-sudo apt update
-
-# Install prerequisites
-sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-
-# Add Docker's official GPG key
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-
-# Add Docker repository (Linux Mint is based on Ubuntu)
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu jammy stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-# Install Docker
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-# Start and enable Docker
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Add your user to docker group (to run without sudo)
-sudo usermod -aG docker $USER
-
-# Log out and log back in for group changes to take effect
-# OR run: newgrp docker
-```
-
-### 1.2 Verify Docker Installation
-
-```bash
-# Check Docker version
-docker --version
-
-# Check Docker Compose version
-docker compose version
-
-# Test Docker installation
-docker run hello-world
-```
-
-### 1.3 Configure VM Network
-
-```bash
-# Find VM IP address
-ip addr show
-
-# Note down the IP address (e.g., 192.168.1.100)
-# You'll need this for Remote-SSH connection
-```
-
-## Part 2: Project Setup
-
-### 2.1 Create Project Directory
-
-```bash
-# Create project directory
-mkdir -p /home/websanta/docker_projects
-cd /home/websanta/docker_projects
-
-# Initialize Git repository (if cloning)
-# git clone <your-repository-url> store-laravel-react
-
-# OR create new project
-mkdir store-laravel-react
-cd store-laravel-react
-git init
-```
-
-### 2.2 Create Project Structure
-
-```bash
-# Create directory structure
-mkdir -p docs
-mkdir -p infrastructure/docker/{nginx/{certs,conf.d},node,php-fpm}
-mkdir -p infrastructure/deploy/github-actions
-mkdir -p scripts
-
-# Create placeholder files
-touch infrastructure/docker/nginx/certs/.gitkeep
-```
-
-### 2.3 Copy Configuration Files
-
-Copy all the configuration files created in previous steps:
-- `docker-compose.yml` → `infrastructure/docker-compose.yml`
-- `Dockerfile` files → respective directories
-- `.env.example` → project root
-- `Makefile` → project root
-- `README.md` → project root
-- `ARCHITECTURE.md` → `docs/`
-- `nginx.conf` → `infrastructure/docker/nginx/conf.d/`
-- `php.ini` → `infrastructure/docker/php-fpm/`
-- `.gitignore` → project root
-
-### 2.4 Generate SSL Certificates
-
-```bash
-# Navigate to project root
-cd /home/websanta/docker_projects/store-laravel-react
-
-# Generate self-signed certificates
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout infrastructure/docker/nginx/certs/temp-key.pem \
-  -out infrastructure/docker/nginx/certs/temp.pem \
-  -subj "/C=US/ST=State/L=City/O=Development/CN=vmmint22.local"
-
-# Verify certificates created
-ls -la infrastructure/docker/nginx/certs/
-```
-
-### 2.5 Configure Hosts File
-
-#### On Host:
-
-```bash
-# Edit hosts file
-sudo nano /etc/hosts
-
-# Add this line:
-127.0.0.1 vmmint22.local
-
-# Save and exit (Ctrl+X, Y, Enter)
-```
-
-## Part 3: Laravel Installation
-
-### 3.1 Install Laravel
-
-```bash
-cd /home/websanta/docker_projects/store-laravel-react
-
-# Option 1: Using Composer on host (if available)
-composer create-project laravel/laravel .
-
-# Option 2: Using Docker temporary container
-docker run --rm -v $(pwd):/app composer:latest create-project laravel/laravel /app
-
-# Set proper permissions
-sudo chown -R $USER:$USER .
-chmod -R 755 storage bootstrap/cache
-```
-
-### 3.2 Configure Laravel
-
-```bash
-# Copy environment file
-cp .env.example .env
-
-# Edit .env file with your settings
-nano .env
-
-# Update necessary values in .env:
-```
-
-## Part 4: Build and Start Application
-
-### 4.1 Initial Build
-
-```bash
-cd /home/websanta/docker_projects/store-laravel-react
-
-# Build Docker containers (first time may take 10-15 minutes)
-make build
-
-# Start containers
-make up
-
-# Check if all containers are running
-make ps
-```
-
-Expected output:
-```
-NAME              STATUS          PORTS
-store_app         Up 30 seconds   9000/tcp
-store_nginx       Up 30 seconds   0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
-store_node        Up 30 seconds   0.0.0.0:5173->5173/tcp
-store_postgres    Up 30 seconds   0.0.0.0:5432->5432/tcp
-store_redis       Up 30 seconds   0.0.0.0:6379->6379/tcp
-store_pgadmin     Up 30 seconds   0.0.0.0:5050->80/tcp
-```
-
-### 4.2 Install Dependencies
-
-```bash
-# Install PHP dependencies
-make composer-install
-
-# Install Node.js dependencies
-make npm-install
-```
-
-### 4.3 Initialize Application
-
-```bash
-# Generate application key
-make key-generate
-
-# Run database migrations
-make migrate
-
-# Create storage symbolic link
-make storage-link
-
-# Fix permissions
-make permissions
-```
-
-### 4.4 Install Authentication (Breeze)
-
-```bash
-# Install Laravel Breeze
-make breeze-install
-
-# This will:
-# 1. Install Breeze package
-# 2. Scaffold React authentication
-# 3. Install NPM dependencies
-# 4. Build assets
-```
-
-### 4.5 Install Admin Panel (Filament)
-
-```bash
-# Install Filament
-make filament-install
-
-# Create admin user
-make artisan CMD="make:filament-user"
-# Follow prompts to create admin account
-```
-
-## Part 5: VS Code Remote Development Setup
-
-### 5.1 Configure SSH Connection
-
-#### On Windows 11:
-
-1. Open VS Code
-2. Install "Remote - SSH" extension
-3. Press `F1` and type "Remote-SSH: Add New SSH Host"
-4. Enter: `ssh websanta@192.168.1.100` (use your VM IP)
-5. Select SSH config file (usually `C:\Users\YourName\.ssh\config`)
-
-#### Configure SSH Config (optional):
-
-Create/edit `~/.ssh/config` on Windows:
-
-```
-Host vmmint22
-    HostName 192.168.1.100
-    User websanta
-    IdentityFile ~/.ssh/id_rsa
-    ForwardAgent yes
-```
-
-### 5.2 Connect to VM
-
-1. Press `F1` in VS Code
-2. Type "Remote-SSH: Connect to Host"
-3. Select `vmmint22` or `websanta@192.168.1.100`
-4. Open folder: `/home/websanta/docker_projects/store-laravel-react`
-
-### 5.3 Install VS Code Extensions on Remote
-
-Recommended extensions:
-- PHP Intelephense
-- Laravel Extra Intellisense
-- Laravel Blade Snippets
-- ES7+ React/Redux/React-Native snippets
-- Tailwind CSS IntelliSense
-- Docker
-- GitLens
-
-## Part 6: Development Workflow
-
-### 6.1 Start Development Environment
-
-```bash
-# In VS Code terminal (connected to VM)
-cd /home/websanta/docker_projects/store-laravel-react
-
-# Start development servers
-make dev
-
-# Or manually:
-make up
-docker compose exec -d node npm run dev
-```
-
-### 6.2 Access Application
-
-Open in Brave browser on Windows 11:
-- **Main App**: https://vmmint22.local
-- **Admin Panel**: https://vmmint22.local/admin
-- **pgAdmin**: http://192.168.1.100:5050
-- **Vite Dev**: http://192.168.1.100:5173
-
-### 6.3 Watch Logs
-
-```bash
-# All containers
-make logs
-
-# Specific container
-make logs CONTAINER=store
-make logs CONTAINER=nginx
-```
-
-## Part 7: Testing and Verification
-
-### 7.1 Test Database Connection
-
-```bash
-# Access PostgreSQL directly
-docker compose exec postgres psql -U store_user -d store_db
-
-# List tables
-\dt
-
-# Exit
-\q
-```
-
-### 7.2 Test Redis Connection
-
-```bash
-# Access Redis CLI
-docker compose exec redis redis-cli -a redis_secret
-
-# Test command
-ping
-# Should respond: PONG
-
-# Exit
-exit
-```
-
-### 7.3 Test Laravel Application
-
-```bash
-# Run Laravel tests
-make test
-
-# Check routes
-make artisan CMD="route:list"
-
-# Check configuration
-make artisan CMD="config:show database"
-```
-
-### 7.4 Test React Application
-
-```bash
-# Build production assets
-make npm CMD="run build"
-
-# Check build output
-ls -la public/build/
-```
-
-## Part 8: Troubleshooting
-
-### Common Issues and Solutions
-
-#### Issue 1: Container Won't Start
-
-```bash
-# Check logs
-make logs CONTAINER=store
-
-# Rebuild container
-docker compose down
-make build
-make up
-```
-
-#### Issue 2: Permission Denied Errors
-
-```bash
-# Fix permissions
-make permissions
-
-# If still issues, run as root:
-docker compose exec -u root store chown -R www:www /var/www
-```
-
-#### Issue 3: Database Connection Failed
-
-```bash
-# Check if PostgreSQL is running
-make ps
-
-# Restart database
-docker compose restart postgres
-
-# Wait for health check
-make logs CONTAINER=postgres
-```
-
-#### Issue 4: SSL Certificate Error in Browser
-
-Accept the self-signed certificate:
-1. In Brave, click "Advanced"
-2. Click "Proceed to vmmint22.local (unsafe)"
-
-Or regenerate certificates:
-```bash
-cd infrastructure/docker/nginx/certs
-rm temp.pem temp-key.pem
-# Run openssl command from section 2.4
-docker compose restart nginx
-```
-
-#### Issue 5: Vite HMR Not Working
-
-```bash
-# Restart Node container
-docker compose restart node
-
-# Check Vite config in vite.config.js:
-# server: {
-#   host: '0.0.0.0',
-#   hmr: {
-#     host: 'vmmint22.local'
-#   }
-# }
-```
-
-#### Issue 6: Cannot Access from Windows Browser
-
-```bash
-# On VM, check firewall
-sudo ufw status
-
-# If firewall is active, allow ports:
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw allow 5173/tcp
-sudo ufw reload
-
-# Check VM network adapter (should be Bridged or NAT)
-```
-
-## Part 9: Database Seeding (Optional)
-
-### 9.1 Create Seeders
-
-```bash
-# Create seeder
-make artisan CMD="make:seeder ProductSeeder"
-make artisan CMD="make:seeder VendorSeeder"
-make artisan CMD="make:seeder CategorySeeder"
-```
-
-### 9.2 Run Seeders
-
-```bash
-# Seed database
-make seed
-
-# Or fresh migration with seed
-make migrate-fresh
-```
-
-## Part 10: Git Configuration
-
-### 10.1 Initialize Repository
-
-```bash
-# Initialize git
-git init
-
-# Add all files
-git add .
-
-# First commit
-git commit -m "Initial project setup with Docker, Laravel, and React"
-
-# Add remote repository (if you have one)
-git remote add origin <your-repository-url>
-git push -u origin main
-```
-
-## Part 11: Backup and Recovery
-
-### 11.1 Backup Database
-
-```bash
-# Create backup
-make db-backup
-
-# Backup file will be created: backup_YYYY-MM-DD_HH-MM-SS.sql
-```
-
-### 11.2 Restore Database
-
-```bash
-# Restore from backup
-make db-restore FILE=backup_2024-01-01_12-00-00.sql
-```
-
-### 11.3 Backup Application Files
-
-```bash
-# Create tar archive (excluding node_modules and vendor)
-tar -czf store-backup-$(date +%Y%m%d).tar.gz \
-  --exclude='node_modules' \
-  --exclude='vendor' \
-  --exclude='storage/logs/*.log' \
-  /home/websanta/docker_projects/store-laravel-react
-```
-
-## Part 12: Next Steps
-
-After successful deployment:
-
-1. ✅ Configure email settings in `.env`
-2. ✅ Set up queue worker: `make artisan CMD="queue:work"`
-3. ✅ Configure scheduled tasks (cron)
-4. ✅ Set up monitoring and logging
-5. ✅ Create initial categories and products
-6. ✅ Test all features thoroughly
-7. ✅ Set up Git workflow and branches
-8. ✅ Configure CI/CD pipeline (GitHub Actions)
-
-## Useful Commands Reference
-
-```bash
-# Container management
-make up           # Start all containers
-make down         # Stop all containers
-make restart      # Restart all containers
-make ps           # Show running containers
-make logs         # View all logs
-
-# Development
-make dev          # Start development environment
-make shell        # Access container shell
-make artisan      # Run Artisan commands
-make composer     # Run Composer commands
-make npm          # Run NPM commands
-
-# Database
-make migrate      # Run migrations
-make seed         # Seed database
-make db-backup    # Backup database
-make db-restore   # Restore database
-
-# Maintenance
-make cache-clear  # Clear all caches
-make optimize     # Optimize application
-make permissions  # Fix permissions
-make clean        # Clean everything (WARNING!)
-```
-
-## Support and Resources
-
-- **Laravel Documentation**: https://laravel.com/docs
-- **React Documentation**: https://react.dev
-- **Docker Documentation**: https://docs.docker.com
-- **Tutorial Video**: https://www.youtube.com/watch?v=1Vj73iP_7vk
+This guide covers deploying the application both for **local development** and as a reference for **production deployment**.
 
 ---
 
-**Deployment Complete! 🎉**
+## Table of Contents
 
-Your Multi-Vendor E-Commerce Marketplace is now ready for development.
+1. [Prerequisites](#1-prerequisites)
+2. [Environment Files](#2-environment-files)
+3. [Docker Setup (dev)](#3-docker-setup-dev)
+4. [Full Installation](#4-full-installation)
+5. [Database](#5-database)
+6. [Assets](#6-assets)
+7. [Queue Worker](#7-queue-worker)
+8. [Testing](#8-testing)
+9. [Production Considerations](#9-production-considerations)
+10. [Common Operations](#10-common-operations)
+11. [Troubleshooting](#11-troubleshooting)
 
-If you encounter any issues not covered in this guide, check container logs using `make logs` and refer to the troubleshooting section.
+---
 
-**Happy Coding!**
+## 1. Prerequisites
+
+### Required
+
+- **Docker** 29.3+
+- **Docker Compose** (included with Docker Desktop / Docker Engine)
+- **Git**
+- **make**
+- **OpenSSL** — for generating local dev certificates
+
+### Install Docker (Ubuntu / Linux Mint)
+
+```bash
+sudo apt update
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+  https://download.docker.com/linux/ubuntu jammy stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+Verify:
+
+```bash
+docker --version
+docker compose version
+```
+
+---
+
+## 2. Environment Files
+
+### Dev / Prod
+
+```bash
+cp .env.example .env
+```
+
+Mandatory variables:
+
+| Variable | Description |
+|---|---|
+| `APP_KEY` | Generated by `make key-generate` |
+| `APP_URL` | Public URL of the application |
+| `DB_DATABASE` | PostgreSQL database name |
+| `DB_USERNAME` | PostgreSQL user |
+| `DB_PASSWORD` | PostgreSQL password |
+| `REDIS_PASSWORD` | Redis password |
+| `APP_ADMIN_PASSWORD` | Seeder admin account password |
+| `APP_VENDOR_PASSWORD` | Seeder vendor account password |
+| `PAYMENT_DRIVER` | `stripe` or `mock` |
+| `STRIPE_KEY` | Stripe publishable key (if driver = stripe) |
+| `STRIPE_SECRET` | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+
+### Testing
+
+```bash
+cp .env.testing.example .env.testing
+```
+
+The test environment uses:
+- A separate PostgreSQL database
+- `SESSION_DRIVER=array`, `CACHE_STORE=array`, `QUEUE_CONNECTION=sync`
+
+---
+
+## 3. Docker Setup (dev)
+
+### SSL Certificates
+
+```bash
+mkdir -p infrastructure/docker/nginx/certs
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout infrastructure/docker/nginx/certs/temp-key.pem \
+  -out   infrastructure/docker/nginx/certs/temp.pem \
+  -subj "/C=US/ST=State/L=City/O=Dev/CN={your-local-domain}"
+```
+
+### Local hostname (optional)
+
+```bash
+echo "127.0.0.1 {your-local-domain}" | sudo tee -a /etc/hosts
+```
+
+### Build images
+
+```bash
+make dbuild        # full rebuild (no cache)
+make dbuild-quick  # with cache (faster)
+```
+
+### Start containers
+
+```bash
+make up-dev        # dev profile (all services)
+make up-prod       # prod profile (no dev tooling)
+```
+
+---
+
+## 4. Full Installation
+
+Run **once** after cloning:
+
+```bash
+chmod +x scripts/*.sh
+make install
+```
+
+See [QUICKSTART.md](QUICKSTART.md) for a step-by-step breakdown of what `make install` does.
+
+Individual steps if needed:
+
+```bash
+make composer-install   # PHP dependencies
+make npm-install        # Node dependencies
+make key-generate       # Generate APP_KEY
+make migrate            # Run all migrations
+make storage-link       # public/storage symlink
+make permissions        # Fix storage/cache permissions
+make start-vite         # Start Vite dev server
+```
+
+---
+
+## 5. Database
+
+### Migrations
+
+```bash
+make migrate             # Run pending migrations
+make migrate-fresh       # Drop all + re-migrate (dev only)
+make migrate-fresh-seed  # Drop + re-migrate + seed (dev only)
+```
+
+### Seeding
+
+The seeder creates:
+- Roles and permissions
+- Demo users (admin, vendor × 2, user)
+- Departments and categories
+- Demo products with images and variations
+
+### Backup / Restore
+
+```bash
+make db-backup                   # Creates backup_YYYY-MM-DD_HH-MM-SS.sql
+make db-restore FILE=backup.sql  # Restore from file
+```
+
+---
+
+## 6. Assets
+
+### Development (with HMR)
+
+```bash
+make start-vite   # Starts Vite dev server in background (port 5174)
+```
+
+Vite proxies through Nginx via the `/vite-hmr` path with WSS.
+
+### Production Build
+
+```bash
+make fbuild   # Compiles and minifies to public/build/
+```
+
+---
+
+## 7. Queue Worker
+
+The `queue` container runs automatically as part of both dev and prod Docker profiles:
+
+```
+php artisan queue:work redis --queue=default,emails --tries=3 --timeout=90
+```
+
+It processes:
+- `default` — general jobs
+- `emails` — order confirmation for buyer and vendor notification emails
+
+In production, ensure the `queue` container is always running. Use Docker's `restart: unless-stopped` policy (already set in `docker-compose.yml`).
+
+---
+
+## 8. Testing
+
+### Run tests
+
+```bash
+make test                          # All tests
+make test-coverage                 # With HTML coverage report
+make test-filter FILTER="CartServiceTest"  # Specific test
+make test-feature                  # Feature suite only
+make test-parallel                 # Parallel execution (faster)
+```
+
+---
+
+## 9. Production Considerations
+
+### Environment
+
+- Set `APP_ENV=production` and `APP_DEBUG=false`
+- Use strong, randomly-generated passwords for DB and Redis
+- Set a real `APP_URL` with a valid SSL certificate
+- Replace `MAIL_MAILER=smtp` with a real SMTP provider (or SES/Postmark)
+- Remove Mailpit, pgAdmin, Stripe CLI dev containers (use `--profile prod`)
+
+### Optimisation
+
+```bash
+make optimize   # Caches config + routes + views
+```
+
+### SSL
+
+Replace the self-signed certificate in `infrastructure/docker/nginx/certs/` with a valid certificate (Let's Encrypt, purchased cert, etc.) or proxy web server calls with a SSL certificate from the host system to nginx in Docker container.
+
+### Static Assets
+
+After `make fbuild`, the compiled assets in `public/build/` should be served directly by Nginx (`Cache-Control: public, immutable`). This is already configured in `infrastructure/docker/nginx/conf.d/default.conf`.
+
+### Xdebug
+
+Disable Xdebug in production for performance:
+
+```bash
+# In .env:
+ENABLE_XDEBUG=false
+```
+
+Then rebuild the `store` container.
+
+---
+
+## 10. Common Operations
+
+### View running containers
+
+```bash
+make ps
+```
+
+### Shell access
+
+```bash
+make shell          # store container (Laravel app)
+make shell-node     # node container
+make shell-db       # postgres container
+make shell-redis    # redis container
+```
+
+### Artisan
+
+```bash
+make artisan CMD="route:list"
+make artisan CMD="make:model MyModel -m"
+make artisan CMD="tinker"
+```
+
+### Clear everything and start over
+
+```bash
+make clean    # ⚠️ Deletes containers, volumes, vendor, node_modules
+make install  # Fresh install
+```
+
+### Stripe webhooks (dev)
+
+The `stripe` container automatically forwards Stripe events to `https://store_nginx/stripe/webhook` when `STRIPE_SECRET_KEY` is set in `.env`.
+
+Trigger a test event:
+
+```bash
+make stripe-trigger EVENT=checkout.session.completed
+```
+
+---
+
+## 11. Troubleshooting
+
+### Containers fail to start
+
+```bash
+make logs         # inspect all logs
+make logs-store   # Laravel/PHP errors
+make ddown && make dbuild && make up-dev
+```
+
+### Permission denied errors
+
+```bash
+make permissions
+```
+
+### Database not connecting
+
+1. Check `make ps` — is `store_postgres` healthy?
+2. Verify `DB_HOST=postgres`, `DB_PORT=5432` in `.env`
+3. `docker compose -f infrastructure/docker-compose.yml restart postgres`
+
+### Vite HMR not working
+
+```bash
+make restart-vite
+
+```
+
+Ensure `VITE_HOST` and `VITE_HMR_HOST` in `.env` match the value you added to `/etc/hosts`.
+
+### Mailpit not receiving emails
+
+- Confirm `MAIL_HOST=mailpit` and `MAIL_PORT=1025` in `.env`
+- Check `storage/logs/laravel.log`
+- Visit `http://localhost:8025`
+
+### Storage images not loading
+
+```bash
+make storage-link   # recreate public/storage symlink
+make permissions    # fix file permissions
+```

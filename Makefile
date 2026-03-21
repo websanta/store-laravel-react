@@ -210,7 +210,6 @@ start-vite: ## Start Vite dev server
 	@echo "$(YELLOW)Starting Vite dev server...$(NC)"
 	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
 	@echo "$(GREEN)Vite dev server started in background!$(NC)"
-	@echo "$(BLUE)Check logs with: make logs-node$(NC)"
 
 stop-vite: ## Stop Vite dev server
 	@echo "$(YELLOW)Stopping Vite dev server...$(NC)"
@@ -237,8 +236,14 @@ migrate: ## Run database migrations
 
 migrate-fresh: ## Fresh migration with seed
 	@echo "$(RED)WARNING: This will drop all tables!$(NC)"
+	@echo "$(YELLOW)Running fresh migrations...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --force
+	@echo "$(GREEN)Fresh migrations complete!$(NC)"
+
+migrate-fresh-seed: ## Fresh migration with seed
+	@echo "$(RED)WARNING: This will drop all tables!$(NC)"
 	@echo "$(YELLOW)Running fresh migrations with seed...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --seed
+	docker compose -f $(COMPOSE_FILE) exec store php artisan migrate:fresh --seed --force
 	@echo "$(GREEN)Fresh migrations complete!$(NC)"
 
 migrate-rollback: ## Rollback last migration

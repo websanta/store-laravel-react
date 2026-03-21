@@ -1,453 +1,381 @@
-# Multi-Vendor E-Commerce Marketplace
+# 🛒 Multi-Vendor E-Commerce Marketplace
 
-A modern, production-ready e-commerce marketplace built with **Laravel 12**, **React 18**, and **TypeScript**. Features multi-vendor support, comprehensive admin panel, email testing, debugging tools, and complete Docker development environment.
+> A production-ready, full-stack multi-vendor e-commerce platform built with **Laravel 12**, **React 18 + TypeScript**, **InertiaJS**, and deployed via **Docker**.
 
-## 🚀 Tech Stack
+[![PHP](https://img.shields.io/badge/PHP-8.4-777BB4?logo=php)](https://php.net)
+[![Laravel](https://img.shields.io/badge/Laravel-12.42-FF2D20?logo=laravel)](https://laravel.com)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://typescriptlang.org)
+[![InertiaJS](https://img.shields.io/badge/InertiaJS-2.2-9553E9)](https://inertiajs.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://postgresql.org)
+[![Docker](https://img.shields.io/badge/Docker-29.3-2496ED?logo=docker)](https://docker.com)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-### Backend
-- **Framework:** Laravel 12.39.0
-- **Language:** PHP 8.3
-- **Database:** PostgreSQL 16 (LTS)
-- **Cache/Sessions:** Redis 7 (LTS)
-- **Authentication:** Laravel Breeze (React + TypeScript)
-- **Admin Panel:** Filament 3
-- **Testing:** Pest (PHPUnit wrapper)
+---
 
-### Frontend
-- **Framework:** React 18
-- **Language:** TypeScript (strict mode)
-- **Build Tool:** Vite 5
-- **Styling:** Tailwind CSS 3
-- **State Management:** Context API
-- **Code Quality:** ESLint + Prettier
+## 📌 Table of Contents
 
-### Infrastructure
-- **Containerization:** Docker & Docker Compose
-- **Web Server:** Nginx (Alpine)
-- **Email Testing:** Mailpit
-- **Database GUI:** pgAdmin 4
-- **Debugging:** Xdebug 3
+- [Overview](#-overview)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture](#-architecture)
+- [Getting Started](#-getting-started)
+- [Docker Services](#-docker-services)
+- [Environment Configuration](#-environment-configuration)
+- [Running Tests](#-running-tests)
+- [Project Structure](#-project-structure)
+- [Key Makefile Commands](#-key-makefile-commands)
+- [Documentation](#-documentation)
 
-## 📋 Prerequisites
+---
 
-- ✅ Docker & Docker Compose
-- ✅ Git
-- ✅ Linux Mint 22 (or similar Linux distribution)
-- ✅ VMware Workstation (for development VM)
-- ✅ VS Code with Remote-SSH extension
-- ✅ At least 4GB RAM allocated to VM
-- ✅ 20GB free disk space
+## 🧭 Overview
 
-## ⚡ Quick Start
+This project is a **full-featured multi-vendor marketplace** where:
 
-For detailed setup, see [QUICKSTART.md](QUICKSTART.md).
+- **Customers** can browse products, manage a cart (guest or authenticated), and checkout via Stripe.
+- **Vendors** can register, manage their store profile, create products with variations and images, and receive order notifications via email.
+- **Admins** manage the platform through a Filament-powered admin panel: approve/reject vendors, manage departments, categories, products.
+
+The application follows the **SPA architecture** via InertiaJS — no separate API layer needed. Laravel handles routing and data, React renders the UI, all seamlessly bridged by Inertia.
+
+---
+
+## ✨ Features
+
+### 🛍️ Customer-Facing
+- Product catalog with search and department filtering
+- Product detail page with image carousel and variation selector (color, size, storage, etc.)
+- Guest cart (cookie-based) with seamless migration to DB on login
+- Stripe Checkout integration with webhook handling
+- Order confirmation emails (queued via Redis)
+- Email verification and full authentication flow (Breeze)
+- Become a Vendor functionality in profile
+
+### 🔧 Admin Panel (Filament)
+- Vendor approval/rejection with reason and email notification
+- Department and category management
+- Product management with status (Draft / Published)
+- Dashboard widget: pending vendor requests
+
+### 🏪 Vendor Admin Panel (Filament)
+- Vendor registration and status flow (Pending → Approved/Rejected)
+- Product CRUD with rich text description, department/category linking
+- Product image management (Spatie Media Library with conversions)
+- Product variation types (Select / Radio / Image) with cartesian variation matrix
+- Quantity and price per variation
+- Order notifications by email
+
+### ⚙️ Technical Highlights
+- **InertiaJS** — monolithic, no REST API overhead
+- **Spatie Media Library** — image uploads with `thumb`, `small`, `large` conversions
+- **Spatie Laravel Permission** — RBAC (roles: admin, vendor, user; permissions: ApproveVendors, SellProducts, BuyProducts)
+- **Stripe CLI** in Docker — webhook forwarding for local development
+- **Mailpit** — zero-config email capture in dev
+- **Redis queues** — async email delivery via dedicated `queue` container
+- **PHPUnit** — Feature tests for auth flows and CartService
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| Backend | Laravel Framework | 12.42 |
+| Language | PHP | 8.4 |
+| Frontend | React | 18.3 |
+| Language | TypeScript | 5.9 |
+| Bridge | InertiaJS | 2.2 |
+| Styling | Tailwind CSS + DaisyUI | 3.4 / 5.5 |
+| Build | Vite | 7.2 |
+| Database | PostgreSQL | 16 |
+| Cache / Queue | Redis | 7.4 |
+| Auth | Laravel Breeze | 2.3 |
+| Admin Panel | Filament | 3.3 |
+| Media | Spatie Media Library | 11 |
+| Permissions | Spatie Laravel Permission | 6 |
+| Payments | Stripe PHP SDK | 19 |
+| Testing | PHPUnit | 11.5 |
+| Containerization | Docker | 29.3 |
+
+---
+
+## 🏗 Architecture
+
+```
+Browser
+  │
+  ▼
+Nginx (SSL termination, reverse proxy)
+  ├── PHP requests ──► store (PHP 8.4 / Laravel / PHP-FPM)
+  │                        ├── PostgreSQL  (primary data store)
+  │                        ├── Redis       (cache, sessions, queues)
+  │                        └── queue       (background email jobs)
+  │
+  └── Vite HMR (dev) ──► node (Vite dev server)
+
+Dev extras:
+  ├── pgAdmin    (DB GUI)
+  ├── Mailpit    (SMTP trap)
+  └── stripe     (Stripe CLI — webhook forwarding)
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed breakdown.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Docker 29+ and Docker Compose
+- Git
+- `make`
+- OpenSSL (for local SSL certificates)
+
+### 1. Clone the Repository
 
 ```bash
-# 1. Clone repository
-cd /home/websanta/docker_projects/
-git clone <your-repo> store-laravel-react
+git clone https://github.com/websanta/store-laravel-react store-laravel-react
 cd store-laravel-react
+```
 
-# 2. Generate SSL certificates
+### 2. Generate SSL Certificates (dev only)
+
+```bash
 mkdir -p infrastructure/docker/nginx/certs
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout infrastructure/docker/nginx/certs/temp-key.pem \
-  -out infrastructure/docker/nginx/certs/temp.pem \
-  -subj "/C=US/ST=State/L=City/O=Dev/CN=vmmint22.local"
-
-# 3. Configure hosts
-echo "127.0.0.1 vmmint22.local" | sudo tee -a /etc/hosts
-
-# 4. Initialize and install
-chmod +x scripts/*.sh
-./scripts/init-project.sh
-make install
-
-# 5. Install Breeze & Filament
-make breeze-install
-make filament-install
-make filament-user
+  -out  infrastructure/docker/nginx/certs/temp.pem \
+  -subj "/C=US/ST=State/L=City/O=Dev/CN=localhost"
 ```
 
-**Done!** Access at https://vmmint22.local
+### 3. Configure Environment
 
-## 🌐 Access Points
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| **Application** | https://vmmint22.local | - |
-| **Admin Panel** | https://vmmint22.local/admin | Created via `make filament-user` |
-| **Mailpit UI** | http://localhost:8025 | - |
-| **pgAdmin** | http://localhost:5050 | admin@store.com / admin |
-| **Vite Dev Server** | http://localhost:5173 | - |
-
-## 🎯 Key Features
-
-### Development Environment
-- ✅ Full Docker containerization (7 services)
-- ✅ Hot Module Replacement (HMR) via Vite
-- ✅ Xdebug 3 for PHP debugging
-- ✅ TypeScript strict mode
-- ✅ ESLint + Prettier code formatting
-- ✅ Automatic SSL certificates
-- ✅ Health checks for all containers
-
-### Backend Features
-- ✅ Laravel 12 with latest features
-- ✅ RESTful API structure
-- ✅ PostgreSQL with migrations
-- ✅ Redis caching and sessions
-- ✅ Queue system ready
-- ✅ Event-driven architecture
-- ✅ Pest testing framework
-
-### Frontend Features
-- ✅ React 18 with TypeScript
-- ✅ Component-based architecture
-- ✅ Context API for state management
-- ✅ Path aliases (@components, @pages)
-- ✅ Tailwind CSS utility-first styling
-- ✅ Laravel Breeze authentication UI
-
-### DevOps
-- ✅ 40+ Makefile commands
-- ✅ Automated initialization scripts
-- ✅ GitHub Actions CI/CD ready
-- ✅ Database backup/restore
-- ✅ Permission management
-- ✅ Container health monitoring
-
-## 📚 Documentation
-
-- **[QUICKSTART.md](QUICKSTART.md)** - Get started in 10 minutes
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide (12 parts)
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture details
-- **[CHECKLIST.md](CHECKLIST.md)** - 142-point setup checklist
-- **[DOCKERFILES_CHECKLIST.md](DOCKERFILES_CHECKLIST.md)** - All Dockerfiles reference
-
-## 🛠️ Common Commands
-
-### Container Management
 ```bash
-make up              # Start all containers
-make down            # Stop all containers
-make restart         # Restart containers
-make ps              # Show container status
-make logs            # View all logs
-make logs-store      # View Laravel logs
-make shell           # Access container shell
+cp .env.example .env
+# Edit .env — fill in DB credentials, Redis password, Stripe keys, etc.
 ```
 
-### Development
+### 4. Add Local Hostname (optional, dev)
+
 ```bash
-make dev             # Start dev environment (Vite HMR)
-make test            # Run Pest tests
-make test-coverage   # Run tests with coverage
-make lint            # Run ESLint
-make format          # Format code with Prettier
-make typescript-check # Check TypeScript types
+echo "127.0.0.1 {your-local-domain}" | sudo tee -a /etc/hosts
 ```
 
-### Laravel
+### 5. Start the Application (dev mode)
+
 ```bash
-make migrate         # Run migrations
-make seed            # Seed database
-make cache-clear     # Clear all caches
-make optimize        # Optimize application
-make artisan CMD="..." # Run artisan command
+make install   # builds images, installs deps, runs migrations, starts Vite
+make seed      # optional: seed demo data
 ```
 
-### Database
-```bash
-make db-backup       # Backup database
-make db-restore FILE=backup.sql # Restore database
+The app is now available at `https://{your-local-domain}` (accept the self-signed certificate in your browser).
+
+> For detailed step-by-step instructions, see [docs/QUICKSTART.md](docs/QUICKSTART.md).
+
+---
+
+## 🐳 Docker Services
+
+### Development (`--profile dev`)
+
+| Container | Role | Port |
+|---|---|---|
+| `store` | Laravel app (PHP-FPM 8.4) |
+| `nginx` | Web server / reverse proxy | 80, 443 |
+| `node` | Vite dev server (HMR) | 5174 |
+| `postgres` | PostgreSQL 16 | 5432 |
+| `pgadmin` | Database GUI | 5050 |
+| `redis` | Cache & queue backend | 6379 |
+| `queue` | Laravel queue worker | — |
+| `mailpit` | SMTP trap / email preview | 8025 (UI), 1025 (SMTP) |
+| `stripe` | Stripe CLI webhook forwarder | — |
+
+### Production (`--profile prod`)
+
+| Container | Role |
+|---|---|
+| `store` | Laravel app |
+| `nginx` | Web server |
+| `node` | Asset build |
+| `postgres` | Database |
+| `redis` | Cache & queues |
+| `queue` | Queue worker |
+
+---
+
+## ⚙️ Environment Configuration
+
+The project ships with two environment templates:
+
+| File | Purpose |
+|---|---|
+| `.env.example` | Development / production environment template |
+| `.env.testing.example` | Test environment template (uses separate DB) |
+
+Key variables to configure:
+
+```env
+APP_URL=https://{your-domain}
+
+DB_HOST=postgres
+DB_DATABASE={dbname}
+DB_USERNAME={username}
+DB_PASSWORD={password}
+
+REDIS_HOST=redis
+REDIS_PASSWORD={redis-password}
+
+MAIL_HOST=mailpit    # dev: captured by Mailpit
+MAIL_PORT=1025
+
+PAYMENT_DRIVER=stripe   # or: mock
+STRIPE_KEY={pk_test_...}
+STRIPE_SECRET={sk_test_...}
+STRIPE_WEBHOOK_SECRET={whsec_...}
 ```
 
-### Debugging
-```bash
-make xdebug-enable   # Enable Xdebug
-make xdebug-disable  # Disable Xdebug (performance)
-make xdebug-status   # Check Xdebug status
-```
+All sensitive values must be set in `.env` — **never commit**.
 
-### Maintenance
-```bash
-make permissions     # Fix permissions
-make clean           # Clean everything (⚠️ deletes data!)
-make info            # Show system info
-```
+---
 
-**See all commands:** `make help`
+## 🧪 Running Tests
 
-## 📁 Project Structure
+The project includes **Feature tests** for authentication flows and the `CartService`.
 
-```
-/store-laravel-react/
-├── app/                      # Laravel application
-│   ├── Http/Controllers/     # API and web controllers
-│   ├── Models/               # Eloquent models
-│   ├── Services/             # Business logic
-│   └── Filament/             # Admin panel resources
-├── resources/
-│   ├── js/                   # React + TypeScript
-│   │   ├── Components/       # Reusable components
-│   │   ├── Pages/            # Page components
-│   │   ├── Layouts/          # Layout components
-│   │   └── types/            # TypeScript definitions
-│   ├── css/                  # Tailwind CSS
-│   └── views/                # Blade templates
-├── tests/                    # Pest tests
-│   ├── Feature/              # Feature tests
-│   └── Unit/                 # Unit tests
-├── infrastructure/
-│   ├── docker/               # Docker configurations
-│   │   ├── nginx/            # Web server
-│   │   ├── node/             # Vite server
-│   │   └── php-fpm/          # PHP runtime
-│   └── docker-compose.yml    # Orchestration
-├── scripts/                  # Automation scripts
-│   ├── init-project.sh       # Project initialization
-│   ├── setup-permissions.sh  # Permission management
-│   └── seed-database.sh      # Database seeding
-├── .vscode/                  # VS Code configuration
-└── docs/                     # Documentation
-```
-
-## 🔧 Configuration Files
-
-### Environment
-- `.env.example` - Environment template
-- `.env` - Your local configuration (auto-generated)
-
-### TypeScript
-- `tsconfig.json` - TypeScript configuration
-- `tsconfig.node.json` - Node/Vite config
-- `vite.config.ts` - Vite build configuration
-
-### Code Quality
-- `.eslintrc.json` - ESLint rules
-- `.prettierrc` - Code formatting rules
-- `package.json` - NPM scripts and dependencies
-
-### Docker
-- `infrastructure/docker-compose.yml` - Services orchestration
-- `infrastructure/docker/*/Dockerfile` - Container definitions
-- `infrastructure/docker/*/php.ini` - PHP configuration
-- `infrastructure/docker/*/xdebug.ini` - Debugging config
-
-## 🧪 Testing
-
-### Backend Testing (Pest)
 ```bash
 # Run all tests
 make test
 
-# Run with coverage
-make test-coverage
+# Run a specific test by name
+make test-filter FILTER="CartServiceTest"
 
-# Run specific test
-make test-filter FILTER="ProductTest"
-
-# Parallel execution
-make test-parallel
+# Run feature tests only
+make test-feature
 ```
 
-### Frontend Testing
+Test configuration lives in `phpunit.xml`. Tests use a dedicated PostgreSQL database (`store_test`).
+
+**Test areas covered:**
+
+| Suite | Tests |
+|---|---|
+| `Auth` | Registration, Login, Email Verification, Password Reset, Password Update, Password Confirmation |
+| `Services` | `CartService` — add, update, remove, totals, guest→auth migration |
+| `Profile` | View, update, delete account |
+
+---
+
+## 📁 Project Structure
+
+```
+store-laravel-react/
+├── app/
+│   ├── Enums/              # OrderStatus, ProductStatus, VendorStatus, Roles, Permissions
+│   ├── Events/             # OrderPaid
+│   ├── Filament/           # Admin panel resources (Departments, Products, Vendors)
+│   ├── Http/
+│   │   ├── Controllers/    # Web + Auth controllers
+│   │   ├── Middleware/     # HandleInertiaRequests
+│   │   └── Resources/      # API resources (Product, Order, User, Vendor, Department)
+│   ├── Listeners/          # SendCustomerOrderConfirmation, SendVendorNewOrderNotification
+│   ├── Mail/               # CheckoutCompleted, NewOrderMail, VendorStatusChanged
+│   ├── Models/             # User, Product, Vendor, Order, OrderItem, CartItem, …
+│   ├── Providers/          # AppServiceProvider, AdminPanelProvider
+│   └── Services/           # CartService, CheckoutService, StripeService, CustomPathGenerator
+├── database/
+│   ├── factories/          # Model factories for testing
+│   ├── migrations/         # 13 migrations (users → orders)
+│   └── seeders/            # Roles, Users, Departments, Categories, Products
+├── docs/                   # Architecture, Quickstart, Deployment docs
+├── infrastructure/
+│   ├── deploy/             # GitHub Actions CI workflow
+│   └── docker/             # Dockerfiles + configs (nginx, node, php-fpm, stripe)
+│       └── docker-compose.yml
+├── resources/
+│   ├── js/                 # React + TypeScript
+│   │   ├── Components/     # App (Navbar, Cart, ProductItem) + Core (UI primitives)
+│   │   ├── Layouts/        # AuthenticatedLayout, GuestLayout
+│   │   ├── Pages/          # Auth, Cart, Department, Product, Profile, Stripe, Vendor
+│   │   └── types/          # TypeScript type definitions
+│   └── views/              # Blade entry point + mail templates
+├── routes/
+│   ├── web.php             # All application routes
+│   └── auth.php            # Authentication routes
+├── scripts/                # Shell scripts (init, permissions, seed)
+├── tests/
+│   └── Feature/            # Auth + CartService feature tests
+├── .env.example
+├── .env.testing.example
+├── Makefile                # 50+ dev, test and deploy commands
+├── phpunit.xml
+└── vite.config.js
+```
+
+---
+
+## 🔑 Key Makefile Commands
+
 ```bash
-# Type checking
-make typescript-check
+# Setup & installation
+make install          # Full setup: build → deps → migrate → Vite
+make setup            # Create .env from .env.example
 
-# Linting
-make lint
-make lint-fix
+# Docker lifecycle
+make up               # Start containers (default profile)
+make up-dev           # Start dev profile + Vite HMR
+make up-prod          # Start prod profile
+make ddown            # Stop dev containers
+make ps               # Show running containers
+make logs             # Tail all logs
+make shell            # Shell into store (app) container
 
-# Code formatting
-make format
-```
+# Development
+make dev              # Start dev environment with HMR
+make start-vite       # Start Vite dev server (background)
+make fbuild           # Build frontend assets for production
 
-## 🐛 Debugging
+# Laravel
+make migrate          # Run migrations
+make migrate-fresh    # Drop all tables and re-migrate
+make seed             # Seed the database
+make artisan CMD="…"  # Run any artisan command
+make cache-clear      # Clear config, route, view, app cache
+make optimize         # Cache config + routes + views
 
-### PHP (Xdebug)
-1. Xdebug is enabled by default
-2. In VS Code: Press `F5` → "Listen for Xdebug (Docker)"
-3. Set breakpoints in PHP files
-4. Trigger request in browser
-
-**Path Mappings:**
-- Container: `/var/www`
-- Local: Project root
-
-### TypeScript
-- IntelliSense enabled
-- Error checking in real-time
-- Type definitions included
-
-## 📧 Email Testing
-
-All emails sent via `Mail` facade are captured by **Mailpit**:
-
-- **Web UI:** http://localhost:8025
-- **SMTP Port:** 1025
-- **No configuration needed** - works out of the box
-
-View sent emails, inspect HTML/text versions, check attachments.
-
-## 🔐 Security Features
-
-- ✅ HTTPS with self-signed certificates
-- ✅ CSRF protection enabled
-- ✅ XSS prevention
-- ✅ SQL injection prevention (PDO)
-- ✅ Redis password protection
-- ✅ Secure session handling
-- ✅ Security headers in Nginx
-- ✅ Non-root Docker containers
-
-## 🚀 Performance Optimizations
-
-- ✅ OPcache enabled (PHP bytecode caching)
-- ✅ Redis for caching and sessions
-- ✅ Gzip compression (Nginx)
-- ✅ Static asset caching
-- ✅ Vite code splitting
-- ✅ Lazy loading (React components)
-- ✅ Database query optimization ready
-
-## 🔄 Development Workflow
-
-### 1. Start Development
-```bash
-make dev
-```
-
-### 2. Make Changes
-- **Backend:** Edit files in `app/`, migrations, routes
-- **Frontend:** Edit files in `resources/js/`
-- Changes auto-reload via Vite HMR
-
-### 3. Test Changes
-```bash
-make test
-make typescript-check
-```
-
-### 4. Commit
-```bash
-git add .
-git commit -m "feat: add new feature"
-git push
-```
-
-## 📦 Package Management
-
-### Composer (PHP)
-```bash
-# Install package
-make composer CMD="require vendor/package"
-
-# Update packages
-make composer-update
-
-# Remove package
-make composer CMD="remove vendor/package"
-```
-
-### NPM (JavaScript)
-```bash
-# Install package
-make npm CMD="install package-name"
-
-# Update packages
-make npm-update
-
-# Remove package
-make npm CMD="uninstall package-name"
-```
-
-## 🌍 Environment Variables
-
-Key variables in `.env`:
-
-```env
-# Application
-APP_URL=https://vmmint22.local
-APP_DEBUG=true
+# Testing
+make test             # Run all tests
+make test-coverage    # Tests with code coverage
+make test-feature     # Feature tests only
+make test-filter FILTER="Name"  # Run specific test
 
 # Database
-DB_CONNECTION=pgsql
-DB_HOST=postgres
-DB_DATABASE=store_db
-DB_USERNAME=store_user
-DB_PASSWORD=secret
+make db-backup        # Export DB to .sql file
+make db-restore FILE=backup.sql
 
-# Redis
-REDIS_HOST=redis
-REDIS_PASSWORD=redis_secret
+# Stripe
+make stripe-logs      # Stripe CLI container logs
+make stripe-trigger EVENT=checkout.session.completed
 
-# Mail
-MAIL_HOST=mailpit
-MAIL_PORT=1025
-
-# Xdebug
-ENABLE_XDEBUG=true
-XDEBUG_MODE=debug,develop,coverage
+# Help
+make help             # List all available commands
 ```
 
-## 🤝 Contributing
+---
 
-This is a portfolio/pet project, but suggestions and improvements are welcome!
+## 📖 Documentation
 
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
+| Document | Description |
+|---|---|
+| [docs/QUICKSTART.md](docs/QUICKSTART.md) | Quick-start guide (up and run in minutes) |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Step-by-step deployment walkthrough |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, data flow, DB schema |
+| [docs/DOCKERFILES_CHECKLIST.md](docs/DOCKERFILES_CHECKLIST.md) | Docker configuration reference |
+| [docs/CHECKLIST.md](docs/CHECKLIST.md) | Full environment setup checklist |
+
+---
 
 ## 📝 License
 
 This project is open-source and available under the [MIT License](LICENSE).
-
-## 👤 Author
-
-Created as a portfolio project for resume demonstration.
-
-## 🙏 Acknowledgments
-
-- Based on tutorial: [Build Multi Vendor E-Commerce Marketplace](https://www.youtube.com/watch?v=1Vj73iP_7vk)
-- Laravel Framework
-- React Community
-- Docker Community
-
-## 📞 Support
-
-- **Issues:** Create an issue on GitHub
-- **Documentation:** See [docs/](docs/) folder
-- **Tutorial:** Follow video guide above
-
-## 🗺️ Roadmap
-
-- [x] Docker development environment
-- [x] Laravel 12 + React 18 + TypeScript
-- [x] Authentication (Breeze)
-- [x] Admin panel (Filament)
-- [x] Testing framework (Pest)
-- [x] Email testing (Mailpit)
-- [x] Debugging (Xdebug)
-- [ ] Multi-vendor functionality
-- [ ] Product catalog
-- [ ] Shopping cart
-- [ ] Payment integration
-- [ ] Order management
-- [ ] Reviews and ratings
-- [ ] Search functionality
-- [ ] CI/CD pipeline
-- [ ] Production deployment
-
----
-
-
-**Documentation:**
-- [Quick Start](QUICKSTART.md)
-- [Deployment Guide](DEPLOYMENT.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Checklist](CHECKLIST.md)

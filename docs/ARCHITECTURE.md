@@ -2,420 +2,286 @@
 
 ## Overview
 
-This document describes the architecture of the Multi-Vendor E-Commerce Marketplace application built with Laravel and React.
+This document describes the architecture of the **Multi-Vendor E-Commerce Marketplace** — a Laravel 12 + React 18 + InertiaJS application deployed in Docker.
 
-## Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Windows 11 Host                          │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │              VS Code with Remote-SSH                    │    │
-│  └────────────────────────────────────────────────────────┘    │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │ SSH Connection
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Linux Mint 22 VM (VMware)                     │
-│                                                                   │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │              Docker Container Network                   │    │
-│  │                                                          │    │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐            │    │
-│  │  │  Nginx   │  │   Node   │  │  Store   │            │    │
-│  │  │  :80/443 │  │  :5173   │  │ (Laravel)│            │    │
-│  │  │          │  │  (Vite)  │  │   :9000  │            │    │
-│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘            │    │
-│  │       │             │              │                   │    │
-│  │       └─────────────┴──────────────┘                   │    │
-│  │                     │                                   │    │
-│  │       ┌─────────────┴──────────────┐                   │    │
-│  │       │                            │                   │    │
-│  │  ┌────▼─────┐  ┌─────────┐  ┌────▼─────┐             │    │
-│  │  │PostgreSQL│  │ pgAdmin │  │  Redis   │             │    │
-│  │  │  :5432   │  │  :5050  │  │  :6379   │             │    │
-│  │  └──────────┘  └─────────┘  └──────────┘             │    │
-│  │                                                          │    │
-│  └────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Components
-
-### 1. Frontend Layer
-
-#### React Application
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **Location**: `resources/js/`
-- **Features**:
-  - Component-based architecture
-  - React Router for navigation
-  - State management (Context API / Redux)
-  - Hot Module Replacement (HMR) via Vite
-  - TypeScript support (optional)
-
-#### UI Components
-- **Authentication**: Laravel Breeze React components
-- **User Interface**: Custom React components
-- **Admin Panel**: Filament (separate blade-based UI)
-
-### 2. Backend Layer
-
-#### Laravel Application
-- **Version**: 12.39.0
-- **PHP**: 8.3
-- **Architecture**: MVC (Model-View-Controller)
-- **Key Features**:
-  - RESTful API endpoints
-  - Authentication via Laravel Breeze
-  - Admin panel via Filament
-  - Queue management
-  - Event-driven architecture
-
-#### API Structure
-```
-/api/v1/
-├── /auth           # Authentication endpoints
-├── /products       # Product CRUD operations
-├── /vendors        # Vendor management
-├── /orders         # Order processing
-├── /users          # User management
-└── /admin          # Admin-specific endpoints
-```
-
-### 3. Data Layer
-
-#### PostgreSQL Database
-- **Version**: 16
-- **Purpose**: Primary relational database
-- **Schema Design**:
-  - Users and authentication
-  - Products and categories
-  - Vendors and stores
-  - Orders and transactions
-  - Reviews and ratings
-
-#### Redis Cache
-- **Version**: 7
-- **Purpose**:
-  - Session storage
-  - Cache layer
-  - Queue backend
-  - Rate limiting
-
-### 4. Infrastructure Layer
-
-#### Docker Containers
-
-##### Nginx Container
-- **Base Image**: `nginx:alpine`
-- **Purpose**: Web server and reverse proxy
-- **Configuration**:
-  - SSL/TLS termination
-  - Static file serving
-  - PHP-FPM proxying
-  - Vite HMR proxying
-
-##### PHP-FPM Container (store)
-- **Base Image**: `php:8.3-fpm-alpine`
-- **Purpose**: PHP application runtime
-- **Extensions**:
-  - PDO, PostgreSQL
-  - Redis
-  - GD, Zip, Mbstring
-  - OPcache
-
-##### Node Container
-- **Base Image**: `node:20-alpine`
-- **Purpose**: Frontend build and development
-- **Responsibilities**:
-  - Vite development server
-  - Asset compilation
-  - NPM package management
-
-##### PostgreSQL Container
-- **Base Image**: `postgres:16-alpine`
-- **Purpose**: Primary database
-- **Configuration**:
-  - Persistent volume storage
-  - Health checks
-  - Automatic backups
-
-##### Redis Container
-- **Base Image**: `redis:7-alpine`
-- **Purpose**: Caching and session storage
-- **Configuration**:
-  - AOF persistence
-  - Password protection
-  - Health checks
-
-##### pgAdmin Container
-- **Base Image**: `dpage/pgadmin4`
-- **Purpose**: Database administration GUI
-- **Access**: http://localhost:5050
-
-## Data Flow
-
-### Request Flow (Client → Server)
-
-```
-Browser (https://vmmint22.local)
-    ↓
-Nginx Container (:443)
-    ↓
-┌───────────────────────┐
-│  Is it a PHP request? │
-└───────────┬───────────┘
-            │
-    ┌───────┴────────┐
-    │ YES            │ NO
-    ↓                ↓
-PHP-FPM         Static Files
-(Laravel)       (Nginx serves directly)
-    ↓
-┌───────────────────────┐
-│ Database/Cache needed?│
-└───────────┬───────────┘
-            │
-    ┌───────┴────────┐
-    │ YES            │ NO
-    ↓                ↓
-PostgreSQL/Redis   Response
-    ↓                ↓
-Response ←──────────┘
-    ↓
-Nginx
-    ↓
-Browser
-```
-
-### Development Flow (Vite HMR)
-
-```
-Browser
-    ↓
-Vite Client (injected in HTML)
-    ↓
-WebSocket Connection
-    ↓
-Nginx (:443/vite-hmr)
-    ↓
-Proxy to Node Container (:5173)
-    ↓
-Vite Dev Server
-    ↓
-File Watcher
-    ↓
-Hot Module Replacement
-    ↓
-Browser (updates without refresh)
-```
-
-## Security Architecture
-
-### SSL/TLS Configuration
-- Self-signed certificates for local development
-- TLS 1.2+ protocols
-- Strong cipher suites
-- HTTPS redirect from HTTP
-
-### Application Security
-- CSRF protection (Laravel)
-- XSS prevention
-- SQL injection prevention (PDO prepared statements)
-- Rate limiting (Redis-backed)
-- Session security (secure, httponly, samesite cookies)
-
-### Docker Security
-- Non-root user for PHP-FPM
-- Read-only containers where possible
-- Secret management via environment variables
-- Network isolation via Docker networks
-
-## Scalability Considerations
-
-### Horizontal Scaling
-- Stateless application design
-- Session storage in Redis (shareable across instances)
-- Database connection pooling
-- Load balancer ready (Nginx configuration)
-
-### Caching Strategy
-- Application cache (Redis)
-- OPcache for PHP bytecode
-- Browser caching for static assets
-- Database query caching
-
-### Performance Optimization
-- Lazy loading for React components
-- Code splitting with Vite
-- Asset minification and compression
-- Database indexing strategy
-- N+1 query prevention (Eloquent eager loading)
-
-## Development Workflow
-
-### Local Development
-```
-1. Code changes in VS Code (Remote-SSH)
-2. Vite watches file changes
-3. HMR updates browser instantly
-4. Laravel detects changes
-5. Automatic reloading for PHP changes
-```
-
-### Testing Strategy
-- **Unit Tests**: PHPUnit for Laravel
-- **Feature Tests**: Laravel HTTP tests
-- **Frontend Tests**: Vitest/Jest for React
-- **Integration Tests**: API endpoint tests
-- **E2E Tests**: Playwright/Cypress (future)
-
-### Deployment Pipeline
-```
-Local Development
-    ↓
-Git Commit
-    ↓
-GitHub Repository
-    ↓
-CI/CD Pipeline (GitHub Actions)
-    ↓
-Automated Tests
-    ↓
-Build Docker Images
-    ↓
-Push to Registry
-    ↓
-Deploy to Production
-```
-
-## Database Schema (High-Level)
-
-```sql
--- Core tables
-users
-├── id
-├── name
-├── email
-├── password
-└── role (admin, vendor, customer)
-
-vendors
-├── id
-├── user_id (FK)
-├── store_name
-├── description
-└── status
-
-products
-├── id
-├── vendor_id (FK)
-├── category_id (FK)
-├── name
-├── description
-├── price
-└── stock
-
-orders
-├── id
-├── user_id (FK)
-├── status
-├── total
-└── created_at
-
-order_items
-├── id
-├── order_id (FK)
-├── product_id (FK)
-├── quantity
-└── price
-
-categories
-├── id
-├── name
-└── parent_id (self-referencing)
-
-reviews
-├── id
-├── product_id (FK)
-├── user_id (FK)
-├── rating
-└── comment
-```
-
-## File Organization
-
-### Laravel Structure
-```
-/store-laravel-react/
-├── app/
-│   ├── Http/Controllers/     # API and web controllers
-│   ├── Models/               # Eloquent models
-│   ├── Services/             # Business logic
-│   ├── Repositories/         # Data access layer
-│   └── Filament/             # Admin panel resources
-├── resources/
-│   ├── js/                   # React application
-│   │   ├── Components/       # Reusable components
-│   │   ├── Pages/            # Page components
-│   │   ├── Layouts/          # Layout components
-│   │   └── App.jsx           # Main React app
-│   └── views/                # Blade templates
-├── routes/
-│   ├── api.php               # API routes
-│   ├── web.php               # Web routes
-│   └── channels.php          # Broadcasting routes
-└── database/
-    ├── migrations/           # Database migrations
-    ├── seeders/              # Database seeders
-    └── factories/            # Model factories
-```
-
-## Technology Stack Summary
-
-| Layer        | Technology        | Version | Purpose                    |
-|--------------|-------------------|---------|----------------------------|
-| Frontend     | React             | 18      | UI framework               |
-| Build Tool   | Vite              | 5       | Fast dev server & bundler  |
-| Backend      | Laravel           | 12.39   | API and business logic     |
-| Language     | PHP               | 8.3     | Server-side language       |
-| Database     | PostgreSQL        | 16      | Primary data store         |
-| Cache        | Redis             | 7       | Caching & sessions         |
-| Web Server   | Nginx             | Alpine  | Reverse proxy              |
-| Runtime      | Node.js           | 20      | Frontend build             |
-| Container    | Docker            | Latest  | Application containerization|
-| Orchestration| Docker Compose    | 3.8     | Multi-container management |
-| Auth         | Laravel Breeze    | Latest  | Authentication scaffolding |
-| Admin        | Filament          | 3       | Admin panel framework      |
-
-## Monitoring & Logging
-
-### Application Logs
-- Laravel logs: `/storage/logs/laravel.log`
-- Nginx access logs: `/var/log/nginx/access.log`
-- Nginx error logs: `/var/log/nginx/error.log`
-- PHP-FPM logs: Container stdout/stderr
-
-### Health Checks
-- Database: `pg_isready` check every 10s
-- Redis: `redis-cli ping` every 10s
-- PHP-FPM: `php-fpm -t` every 30s
-- Nginx: `nginx -t` every 30s
-
-## Future Enhancements
-
-1. **Message Queue**: Laravel Horizon for queue management
-2. **Search**: Elasticsearch integration for product search
-3. **CDN**: CloudFlare or similar for asset delivery
-4. **Storage**: S3-compatible object storage for uploads
-5. **Monitoring**: Prometheus + Grafana for metrics
-6. **CI/CD**: Automated testing and deployment pipeline
-7. **Microservices**: Potential split of payment/notification services
+The application follows a **monolithic app** pattern via InertiaJS: Laravel owns routing, data fetching, and business logic; React renders the UI. There is no standalone REST API — Inertia acts as a protocol bridge, eliminating the need for a separate frontend/backend split.
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025
-**Author**: WebSanta
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Docker Network                       │
+│                                                             │
+│  ┌──────────────┐    ┌─────────────────────────────────┐    │
+│  │    nginx     │    │         store (PHP-FPM)         │    │
+│  │  :80 / :443  │───►│  Laravel 12 / InertiaJS / React │    │
+│  │  (SSL, proxy)│    │           PHP 8.4               │    │
+│  └──────┬───────┘    └────────────┬────────────────────┘    │
+│         │                         │                         │
+│         │ (Vite HMR, dev only)    ├─── PostgreSQL 16        │
+│         │                         │       (primary DB)      │
+│  ┌──────▼───────┐                 ├─── Redis 7.4            │
+│  │     node     │                 │       (cache, sessions, │
+│  │  Vite :5174  │                 │        queue backend)   │
+│  └──────────────┘                 │                         │
+│                                   └─── queue (worker)       │
+│                                           (email jobs)      │
+│                                                             │
+│  Dev-only:  pgAdmin · Mailpit · Stripe CLI                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Docker Services
+
+### Development profile
+
+| Service | Image | Role |
+|---|---|---|
+| `store` | `php:8.4-fpm-alpine` (custom) | Laravel app — PHP-FPM runtime |
+| `nginx` | `nginx:alpine` (custom) | Web server, SSL termination, proxy |
+| `node` | `node:20-alpine` (custom) | Vite dev server + HMR |
+| `postgres` | `postgres:16-alpine` | Primary relational database |
+| `pgadmin` | `dpage/pgadmin4` | Web-based PostgreSQL GUI |
+| `redis` | `redis:7-alpine` | Cache, sessions, queue backend |
+| `queue` | same as `store` | `php artisan queue:work redis` |
+| `mailpit` | `axllent/mailpit` | SMTP trap for local email testing |
+| `stripe` | `stripe/stripe-cli` (custom) | Webhook forwarding to local app |
+
+### Production profile
+
+`store`, `nginx`, `node`, `postgres`, `redis`, `queue` — development tooling excluded.
+
+---
+
+## Request Lifecycle
+
+### Browser → Response
+
+```
+Browser request
+    ▼
+Nginx (:443)  ──────────────────────── static file? serve directly
+    │
+    ▼ PHP request
+store (PHP-FPM / Laravel)
+    │
+    ├── Middleware stack (auth, Inertia, CSRF …)
+    │
+    ├── Router → Controller → Service → Model
+    │                                     │
+    │                              PostgreSQL / Redis
+    │
+    └── InertiaJS response (JSON or full HTML on first visit)
+            ▼
+        React renders component
+            ▼
+        Browser (SPA navigation from here on)
+```
+
+### Vite HMR in Development
+
+```
+Browser ◄──── WebSocket ────► Nginx (:443 /vite-hmr proxy)
+                                        ▼
+                               node (Vite dev server :5174)
+                                        ▼
+                               File watcher → HMR update
+```
+
+---
+
+## Application Layers
+
+### Backend (Laravel)
+
+```
+app/
+├── Enums/          Business-rule enumerations
+│   ├── OrderStatusEnum       draft | processing | paid | shipped | delivered | cancelled
+│   ├── ProductStatusEnum     draft | published
+│   ├── VendorStatusEnum      pending | approved | rejected
+│   ├── RolesEnum             admin | vendor | user
+│   ├── PermissionsEnum       ApproveVendors | SellProducts | BuyProducts
+│   └── ProductVariationTypeEnum  Select | Radio | Image
+│
+├── Models/         Eloquent models (PostgreSQL)
+│   User, Vendor, Product, ProductVariation, VariationTypes,
+│   VariationTypeOption, Category, Department,
+│   Order, OrderItem, CartItem
+│
+├── Services/       Business logic
+│   ├── CartService         guest (cookie) and auth (DB) cart management
+│   ├── CheckoutService     order + Stripe line-item creation
+│   ├── StripeService       webhook handlers (session.completed, charge.updated)
+│   └── CustomPathGenerator hashed media storage paths
+│
+├── Http/
+│   ├── Controllers/        Web controllers + full Auth suite (Breeze)
+│   ├── Middleware/         HandleInertiaRequests (shared props)
+│   └── Resources/          JSON API resources for Inertia props
+│
+├── Filament/       Admin panel resources
+│   ├── Resources/  Department, Product (+ sub-pages), Vendor
+│   └── Widgets/    PendingVendors dashboard widget
+│
+├── Events/         OrderPaid
+├── Listeners/      SendCustomerOrderConfirmation, SendVendorNewOrderNotification
+└── Mail/           CheckoutCompleted, NewOrderMail, VendorStatusChanged
+```
+
+### Frontend (React + TypeScript)
+
+```
+resources/js/
+├── Components/
+│   ├── App/    Navbar, CartItem, MiniCartDropdown, ProductItem, ApplicationLogo
+│   └── Core/   Carousel, TextInput, Modal, Dropdown, buttons, InputLabel …
+│
+├── Layouts/
+│   ├── AuthenticatedLayout   toast notifications, error/success banners
+│   └── GuestLayout
+│
+├── Pages/
+│   ├── Auth/       Login, Register, ForgotPassword, ResetPassword, VerifyEmail, ConfirmPassword
+│   ├── Cart/       Index (grouped by vendor, per-vendor checkout)
+│   ├── Department/ Index (filtered product listing)
+│   ├── Product/    Show (carousel, variation picker, add-to-cart)
+│   ├── Profile/    Edit (profile info, password, delete account, vendor details)
+│   ├── Stripe/     Success, Failure
+│   ├── Vendor/     Profile (store page with product grid)
+│   ├── Dashboard   (authenticated home)
+│   └── Home        (public product listing + search)
+│
+└── types/          TypeScript interfaces: User, Product, CartItem, Order, Vendor …
+```
+
+---
+
+## Database Schema
+
+### Core tables
+
+| Table | Description |
+|---|---|
+| `users` | Authentication, roles via `model_has_roles` |
+| `vendors` | Store profile, status, cover image, PK = `user_id` |
+| `departments` | Top-level product categories |
+| `categories` | Subcategories (belong to department, self-referencing parent) |
+| `products` | Product listings with soft-delete |
+| `variation_types` | Product attribute types (Color, Size …) |
+| `variation_type_options` | Concrete options per type |
+| `product_variations` | Price/qty per option combination (JSON array of option IDs) |
+| `media` | Spatie Media Library — images for products and variation options |
+| `cart_items` | Shopping cart rows (user-scoped, JSON option IDs) |
+| `orders` | One order per vendor per checkout session |
+| `order_items` | Line items with variation snapshot |
+| `sessions` / `cache` / `jobs` | Laravel defaults |
+| `roles` / `permissions` / pivots | Spatie Permission tables |
+
+### Key relationships
+
+```
+User ──< Vendor (1:1, user_id PK)
+User ──< CartItem
+User ──< Order (as buyer)
+User ──< Order (as vendor_user, seller)
+
+Product >── Vendor (via created_by → users.id)
+Product >── Department
+Product >── Category
+Product ──< VariationTypes ──< VariationTypeOptions
+Product ──< ProductVariations
+Product ──< Media (collection: images)
+VariationTypeOption ──< Media (collection: images)
+
+Order >── User (buyer)
+Order >── User (vendor_user_id)
+Order ──< OrderItem >── Product
+```
+
+---
+
+## Authentication & Authorization
+
+Authentication is provided by **Laravel Breeze** (React variant). After login:
+
+- Admins and Vendors are redirected to the Filament admin panel.
+- Regular users are redirected to the dashboard.
+
+Cart items stored in cookies are **automatically migrated to the database** on login.
+
+Authorization uses **Spatie Laravel Permission** (RBAC):
+
+| Role | Permissions |
+|---|---|
+| `user` | BuyProducts |
+| `vendor` | SellProducts, BuyProducts |
+| `admin` | ApproveVendors, SellProducts, BuyProducts |
+
+The Filament admin panel access is guarded by `role:admin|vendor` middleware.
+
+---
+
+## Payment Flow (Stripe)
+
+```
+Cart → POST /cart/checkout
+    ▼
+CheckoutService::checkout()
+    Creates Order records (status: draft)
+    Builds Stripe line items
+    ▼
+Stripe\Checkout\Session::create()
+    ▼
+User redirected to Stripe Hosted Checkout
+    ▼
+Stripe webhook: checkout.session.completed
+    ▼
+StripeService::handleCheckoutSessionCompleted()
+    Orders marked as paid
+    Product quantities decremented
+    ▼
+Stripe webhook: charge.updated
+    ▼
+StripeService::handleChargeUpdated()
+    Commission splits calculated
+    ▼
+OrderPaid event dispatched
+    ▼
+Listeners (queued via Redis):
+    SendCustomerOrderConfirmation  → CheckoutCompleted mail
+    SendVendorNewOrderNotification → NewOrderMail per vendor
+```
+
+A `mock` payment driver is also supported (`PAYMENT_DRIVER=mock`) for development without Stripe credentials.
+
+---
+
+## Queue Architecture
+
+Email notifications are dispatched asynchronously via **Redis queues**:
+
+- Queue connection: `redis`
+- Queue name: `emails`
+- Worker: dedicated `queue` Docker container running `php artisan queue:work redis --queue=default,emails`
+
+This ensures that the HTTP response is returned immediately to the user, and emails are delivered in the background.
+
+---
+
+## Media Library
+
+Product images and variation option images are managed by **Spatie Laravel Media Library**:
+
+- Storage disk: `public`
+- Path generator: `CustomPathGenerator` (MD5 hash of media ID + app key)
+- Conversions registered on `Product` and `VariationTypeOption`:
+  - `thumb` → 100px wide
+  - `small` → 480px wide
+  - `large` → 1200px wide
+
+---

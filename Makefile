@@ -39,8 +39,8 @@ install: ## Initial project installation (complete setup)
 	@make composer-install
 	@make npm-install
 	@make key-generate
-	@make pest-install
-	@make seed-db
+	@make migrate-fresh-seed
+# 	@make seed-db
 	@make storage-link
 	@make start-vite
 	@make stripe-setup
@@ -288,14 +288,6 @@ optimize: ## Optimize application
 	docker compose -f $(COMPOSE_FILE) exec store php artisan view:cache
 	docker compose -f $(COMPOSE_FILE) exec store php artisan optimize
 	@echo "$(GREEN)Application optimized!$(NC)"
-
-pest-install: ## Install Pest testing framework (Pest 3.x)
-	@echo "$(YELLOW)Installing Pest and Pest Laravel plugin...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require pestphp/pest --dev --with-all-dependencies
-	docker compose -f $(COMPOSE_FILE) exec store composer require pestphp/pest-plugin-laravel --dev
-	@echo "$(YELLOW)Initializing Pest folder structure...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store ./vendor/bin/pest --init
-	@echo "$(GREEN)Pest installed and initialized successfully!$(NC)"
 
 storage-link: ## Create storage symbolic link
 	@echo "$(YELLOW)Creating storage link...$(NC)"

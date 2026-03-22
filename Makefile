@@ -1,14 +1,27 @@
 .PHONY: help build up down restart logs shell composer artisan npm test clean install setup
 
 # Color output
-YELLOW := \033[0;33m
-GREEN := \033[0;32m
-RED := \033[0;31m
-BLUE := \033[0;34m
-NC := \033[0m # No Color
+# YELLOW := \033[0;33m
+# GREEN := \033[0;32m
+# RED := \033[0;31m
+# BLUE := \033[0;34m
+# NC := \033[0m # No Color
+YELLOW :=
+GREEN :=
+RED :=
+BLUE :=
+NC :=
 
 # Docker Compose file path
 COMPOSE_FILE := infrastructure/docker-compose.yml
+
+# Load .env file
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
+SHELL := /bin/bash
 
 help: ## Show this help message
 	@echo '$(YELLOW)Available commands:$(NC)'
@@ -18,7 +31,8 @@ install: ## Initial project installation (complete setup)
 	@echo "$(YELLOW)Starting complete project installation...$(NC)"
 	@make setup
 	@make dbuild
-	@make up
+	@make init-project
+	@make up-dev
 	@echo "$(YELLOW)Waiting for containers to be ready...$(NC)"
 	@sleep 10
 	@make permissions
@@ -26,7 +40,7 @@ install: ## Initial project installation (complete setup)
 	@make npm-install
 	@make key-generate
 	@make pest-install
-	@make migrate
+	@make seed-db
 	@make storage-link
 	@make start-vite
 	@make stripe-setup
@@ -39,30 +53,6 @@ install: ## Initial project installation (complete setup)
 	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
 	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
 	@echo "$(GREEN)============================================$(NC)"
-
-livewire-install: ## Install Livewire
-	@echo "$(YELLOW)Installing Livewire...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require livewire/livewire
-	docker compose -f $(COMPOSE_FILE) exec store php artisan livewire:publish --assets
-	@echo "$(GREEN)Livewire installed and assets published!$(NC)"
-
-breeze-install: ## Install Laravel Breeze with React and TypeScript
-	@echo "$(YELLOW)Installing Laravel Breeze...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require laravel/breeze --dev
-	docker compose -f $(COMPOSE_FILE) exec store php artisan breeze:install react --typescript
-	docker compose -f $(COMPOSE_FILE) exec node npm install --legacy-peer-deps
-	docker compose -f $(COMPOSE_FILE) exec node npm run build
-	@echo "$(GREEN)Breeze with React and TypeScript installed successfully!$(NC)"
-
-filament-install: ## Install Filament admin panel
-	@echo "$(YELLOW)Installing Filament...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require filament/filament:"^3.0"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan filament:install --panels
-	@echo "$(GREEN)Filament installed successfully!$(NC)"
-	@echo "$(BLUE)Create admin user with: make filament-user$(NC)"
-
-filament-user: ## Create Filament admin user
-	@docker compose -f $(COMPOSE_FILE) exec store php artisan make:filament-user
 
 setup: ## Setup environment file
 	@if [ ! -f .env ]; then \
@@ -92,10 +82,6 @@ fbuild: ## Build assets for production
 	@echo "$(GREEN)Production build complete!$(NC)"
 	@echo "$(BLUE)Built files are in public/build/$(NC)"
 
-build-watch: ## Build assets with watch mode
-	@echo "$(YELLOW)Building assets in watch mode...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec node npm run build -- --watch
-
 build: ## Full production build (composer + npm)
 	@echo "$(YELLOW)Starting full production build...$(NC)"
 	@make composer-install
@@ -110,13 +96,29 @@ build: ## Full production build (composer + npm)
 	@echo "  3. Clear cache: make cache-clear"
 	@echo "$(GREEN)============================================$(NC)"
 
-deploy-prepare: ## Prepare application for deployment
-	@echo "$(YELLOW)Preparing application for deployment...$(NC)"
-	@make cache-clear
-	@make composer-install
-	@make fbuild
-	@make optimize
-	@echo "$(GREEN)Application ready for deployment!$(NC)"
+livewire-install: ## Install Livewire
+	@echo "$(YELLOW)Installing Livewire...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require livewire/livewire
+	docker compose -f $(COMPOSE_FILE) exec store php artisan livewire:publish --assets
+	@echo "$(GREEN)Livewire installed and assets published!$(NC)"
+
+breeze-install: ## Install Laravel Breeze with React and TypeScript
+	@echo "$(YELLOW)Installing Laravel Breeze...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require laravel/breeze --dev
+	docker compose -f $(COMPOSE_FILE) exec store php artisan breeze:install react --typescript
+	docker compose -f $(COMPOSE_FILE) exec node npm install --legacy-peer-deps
+	docker compose -f $(COMPOSE_FILE) exec node npm run build
+	@echo "$(GREEN)Breeze with React and TypeScript installed successfully!$(NC)"
+
+filament-install: ## Install Filament admin panel
+	@echo "$(YELLOW)Installing Filament...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require filament/filament:"^3.0"
+	docker compose -f $(COMPOSE_FILE) exec store php artisan filament:install --panels
+	@echo "$(GREEN)Filament installed successfully!$(NC)"
+	@echo "$(BLUE)Create admin user with: make filament-user$(NC)"
+
+filament-user: ## Create Filament admin user
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan make:filament-user
 
 dbuild: ## Build Docker containers
 	@echo "$(YELLOW)Building Docker containers...$(NC)"
@@ -128,18 +130,18 @@ dbuild-quick: ## Build Docker containers (with cache)
 
 up: ## Start Docker containers
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
-	docker compose -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) --profile dev up -d
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
-up-dev: ## Start Docker containers
+up-dev: ## Start Docker containers in dev mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) --profile dev up -d
 	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
-up-prod: ## Start Docker containers
+up-prod: ## Start Docker containers in prod mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) --profile prod up -d
 	@echo "$(GREEN)Containers started!$(NC)"
@@ -304,6 +306,18 @@ permissions: ## Fix storage and cache permissions
 	@echo "$(YELLOW)Fixing permissions...$(NC)"
 	@chmod +x scripts/setup-permissions.sh
 	@./scripts/setup-permissions.sh
+	@echo "$(GREEN)Permissions fixed!$(NC)"
+
+init-project: ## Project env and file structure initialisation
+	@echo "$(YELLOW)Project env and file structure initialisation...$(NC)"
+	@chmod +x scripts/init-project.sh
+	@./scripts/init-project.sh
+	@echo "$(GREEN)Project successfully initialized!$(NC)"
+
+seed-db: ## Fresh DB, then Migrate and Seed with demo data
+	@echo "$(YELLOW)Freshing > Migrating > Seeding database with demo data...$(NC)"
+	@chmod +x scripts/seed-database.sh
+	@./scripts/seed-database.sh
 	@echo "$(GREEN)Permissions fixed!$(NC)"
 
 volumes-list: ## List all project volumes

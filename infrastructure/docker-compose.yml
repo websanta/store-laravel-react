@@ -13,6 +13,8 @@ services:
       - ../:/var/www
       - ./docker/php-fpm/php.ini:/usr/local/etc/php/conf.d/custom.ini
       - ./docker/php-fpm/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    env_file:
+      - ../.env
     environment:
       - APP_ENV=${APP_ENV:-local}
       - APP_DEBUG=${APP_DEBUG:-true}
@@ -59,8 +61,8 @@ services:
     container_name: store_nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ../:/var/www
       - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
@@ -113,6 +115,8 @@ services:
     image: postgres:16-alpine
     container_name: store_postgres
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       POSTGRES_DB: ${DB_DATABASE}
       POSTGRES_USER: ${DB_USERNAME}
@@ -158,11 +162,13 @@ services:
     image: redis:7-alpine
     container_name: store_redis
     restart: unless-stopped
+    env_file:
+      - ../.env
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secret}
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
     networks:
       - store_network
     healthcheck:
@@ -185,6 +191,8 @@ services:
     restart: unless-stopped
     volumes:
       - ../:/var/www
+    env_file:
+      - ../.env
     environment:
       - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
@@ -227,6 +235,8 @@ services:
       dockerfile: infrastructure/docker/stripe/Dockerfile
     container_name: store_stripe
     restart: unless-stopped
+    env_file:
+      - ../.env
     command: listen --api-key ${STRIPE_SECRET_KEY} --forward-to https://store_nginx/stripe/webhook --skip-verify
     environment:
       - STRIPE_API_KEY=${STRIPE_SECRET_KEY}

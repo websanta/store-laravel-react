@@ -37,8 +37,9 @@ if [ -f /.dockerenv ]; then
 
     # Set ownership to www:www user
     print_info "Setting ownership to www:www..."
-    chown -R www:www /var/www/storage
-    chown -R www:www /var/www/bootstrap/cache
+    chown -R www:www /var/www
+    # chown -R www:www /var/www/bootstrap
+    # chown -R www:www /var/www/bootstrap/cache
     print_success "Ownership set"
 
     # Set directory permissions to 775
@@ -67,13 +68,22 @@ if [ -f /.dockerenv ]; then
     print_success "Storage permissions: $storage_perm"
     print_success "Cache permissions: $cache_perm"
 
+    # Set ownership to node:node user
+    print_info "Setting ownership node:node to store..."
+    chown -R node:node /var/www/node_modules 2>/dev/null || true
+    print_success "Ownership set"
+
+    # Set permissions to 775
+    print_info "Setting permissions to 775..."
+    chmod -R 775 /var/www/node_modules;
+    print_success "Directory permissions set"
+
 else
     print_info "Running from host, will use docker compose exec..."
 
     # Set ownership to www:www user
-    print_info "Setting ownership to www:www..."
-    docker compose -f "$COMPOSE_FILE" exec -u root store chown -R www:www /var/www/storage
-    docker compose -f "$COMPOSE_FILE" exec -u root store chown -R www:www /var/www/bootstrap/cache
+    print_info "Setting ownership www:www to store..."
+    docker compose -f "$COMPOSE_FILE" exec -u root store chown -R www:www /var/www
     print_success "Ownership set"
 
     # Set directory permissions to 775
@@ -108,6 +118,16 @@ else
     cache_perm=$(docker compose -f "$COMPOSE_FILE" exec store stat -c %a /var/www/bootstrap/cache | tr -d '\r')
     print_success "Storage permissions: $storage_perm"
     print_success "Cache permissions: $cache_perm"
+
+    # Set ownership to node:node user
+    print_info "Setting ownership node:node to store..."
+    docker compose -f "$COMPOSE_FILE" exec -u root node chown -R node:node /var/www/node_modules 2>/dev/null || true
+    print_success "Ownership set"
+
+    # Set permissions to 775
+    print_info "Setting permissions to 775..."
+    docker compose -f "$COMPOSE_FILE" exec -u root node chmod -R 775 /var/www/node_modules;
+    print_success "Directory permissions set"
 fi
 
 echo ""

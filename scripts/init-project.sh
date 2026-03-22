@@ -48,48 +48,6 @@ if [ -d "temp" ]; then
     sudo rm -rf temp
 fi
 
-# Check if Laravel is already installed
-if [ -f "composer.json" ] && grep -q "laravel/framework" composer.json; then
-    print_warning "Laravel already installed, skipping installation..."
-else
-    print_info "Installing Laravel 12..."
-
-    # Install Laravel using Composer in Docker with proper user permissions
-    docker run --rm -v $(pwd):/app -w /app -u $(id -u):$(id -g) composer:latest \
-        create-project --prefer-dist laravel/laravel temp "12.*"
-
-    # Move files from temp to root
-    if [ -d "temp" ]; then
-        print_info "Moving Laravel files to project root..."
-        shopt -s dotglob
-        cp -r temp/* . 2>/dev/null || true
-        shopt -u dotglob
-
-        # Clean up temp directory
-        print_info "Cleaning up temp directory..."
-        rm -rf temp
-
-        print_success "Laravel 12 installed successfully"
-    else
-        print_error "Failed to install Laravel"
-        exit 1
-    fi
-fi
-
-# Setup .env file
-if [ ! -f ".env" ]; then
-    if [ -f ".env.example" ]; then
-        print_info "Creating .env from .env.example..."
-        cp .env.example .env
-        print_success ".env file created"
-    else
-        print_error ".env.example not found!"
-        exit 1
-    fi
-else
-    print_warning ".env file already exists, skipping..."
-fi
-
 # Update .env with Docker-specific settings
 print_info "Configuring .env for Docker environment..."
 sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=pgsql/' .env
@@ -128,41 +86,4 @@ mkdir -p database/{factories,seeders,migrations}
 mkdir -p tests/{Feature,Unit}
 print_success "Directories created"
 
-# Set proper permissions
-print_info "Setting permissions..."
-chmod -R 775 storage bootstrap/cache
-chown -R $USER:$USER storage bootstrap/cache
-print_success "Permissions set"
-
-# Create .gitkeep files
-print_info "Creating .gitkeep files..."
-touch storage/logs/.gitkeep
-touch storage/app/.gitkeep
-touch storage/app/public/.gitkeep
-touch infrastructure/docker/nginx/certs/.gitkeep
-print_success ".gitkeep files created"
-
-# Install Pest
-print_info "Checking for Pest testing framework..."
-if [ -f "composer.json" ]; then
-    if ! grep -q "pestphp/pest" composer.json; then
-        print_info "Pest will be installed via composer after containers start"
-    else
-        print_success "Pest already configured"
-    fi
-fi
-
 print_success "Project initialization complete!"
-echo ""
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}Next steps:${NC}"
-echo -e "${BLUE}1. Run: make build${NC}"
-echo -e "${BLUE}2. Run: make up${NC}"
-echo -e "${BLUE}3. Run: make composer-install${NC}"
-echo -e "${BLUE}4. Run: make npm-install${NC}"
-echo -e "${BLUE}5. Run: make key-generate${NC}"
-echo -e "${BLUE}6. Run: make pest-install${NC}"
-echo -e "${BLUE}7. Run: make migrate${NC}"
-echo ""
-echo -e "${YELLOW}Or simply run: make install (does all of the above)${NC}"
-echo -e "${GREEN}========================================${NC}"

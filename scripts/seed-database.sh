@@ -34,7 +34,7 @@ print_warning() {
 }
 
 # Parse arguments
-FRESH=false
+FRESH=true
 SEED=true
 ENV="local"
 

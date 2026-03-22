@@ -23,9 +23,6 @@ install: ## Initial project installation (complete setup)
 	@sleep 10
 	@make permissions
 	@make composer-install
-	@make livewire-install
-	@make breeze-install
-	@make filament-install
 	@make npm-install
 	@make key-generate
 	@make pest-install
@@ -42,6 +39,30 @@ install: ## Initial project installation (complete setup)
 	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
 	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
 	@echo "$(GREEN)============================================$(NC)"
+
+livewire-install: ## Install Livewire
+	@echo "$(YELLOW)Installing Livewire...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require livewire/livewire
+	docker compose -f $(COMPOSE_FILE) exec store php artisan livewire:publish --assets
+	@echo "$(GREEN)Livewire installed and assets published!$(NC)"
+
+breeze-install: ## Install Laravel Breeze with React and TypeScript
+	@echo "$(YELLOW)Installing Laravel Breeze...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require laravel/breeze --dev
+	docker compose -f $(COMPOSE_FILE) exec store php artisan breeze:install react --typescript
+	docker compose -f $(COMPOSE_FILE) exec node npm install --legacy-peer-deps
+	docker compose -f $(COMPOSE_FILE) exec node npm run build
+	@echo "$(GREEN)Breeze with React and TypeScript installed successfully!$(NC)"
+
+filament-install: ## Install Filament admin panel
+	@echo "$(YELLOW)Installing Filament...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require filament/filament:"^3.0"
+	docker compose -f $(COMPOSE_FILE) exec store php artisan filament:install --panels
+	@echo "$(GREEN)Filament installed successfully!$(NC)"
+	@echo "$(BLUE)Create admin user with: make filament-user$(NC)"
+
+filament-user: ## Create Filament admin user
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan make:filament-user
 
 setup: ## Setup environment file
 	@if [ ! -f .env ]; then \
@@ -200,12 +221,6 @@ npm-update: ## Update NPM dependencies
 npm: ## Run NPM command (use CMD="command" syntax)
 	@docker compose -f $(COMPOSE_FILE) exec node npm $(CMD)
 
-livewire-install: ## Install Livewire
-	@echo "$(YELLOW)Installing Livewire...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require livewire/livewire
-	docker compose -f $(COMPOSE_FILE) exec store php artisan livewire:publish --assets
-	@echo "$(GREEN)Livewire installed and assets published!$(NC)"
-
 start-vite: ## Start Vite dev server
 	@echo "$(YELLOW)Starting Vite dev server...$(NC)"
 	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
@@ -335,24 +350,6 @@ ps: ## Show running containers
 
 stats: ## Show container resource usage
 	@docker stats --no-stream
-
-breeze-install: ## Install Laravel Breeze with React and TypeScript
-	@echo "$(YELLOW)Installing Laravel Breeze...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require laravel/breeze --dev
-	docker compose -f $(COMPOSE_FILE) exec store php artisan breeze:install react --typescript
-	docker compose -f $(COMPOSE_FILE) exec node npm install --legacy-peer-deps
-	docker compose -f $(COMPOSE_FILE) exec node npm run build
-	@echo "$(GREEN)Breeze with React and TypeScript installed successfully!$(NC)"
-
-filament-install: ## Install Filament admin panel
-	@echo "$(YELLOW)Installing Filament...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require filament/filament:"^3.0"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan filament:install --panels
-	@echo "$(GREEN)Filament installed successfully!$(NC)"
-	@echo "$(BLUE)Create admin user with: make filament-user$(NC)"
-
-filament-user: ## Create Filament admin user
-	@docker compose -f $(COMPOSE_FILE) exec store php artisan make:filament-user
 
 xdebug-enable: ## Enable Xdebug
 	@echo "$(YELLOW)Enabling Xdebug...$(NC)"

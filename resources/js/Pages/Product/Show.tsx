@@ -136,26 +136,12 @@ function Show({ product, variationOptions }: {
           {type.type === 'Radio' &&
             <div className="join mt-2 mb-4 w-full">
               {type.options.map(option => (
-                // <div
-                //   onClick={() => chooseOption(type.id, option)}
-                //   key={option.id}
-                //   className={`join-item btn ${selectedOptions[type.id]?.id === option.id ? 'btn-active' : ''}`}
-                //   type="radio"
-                //   value={option.id}
-                //   name={'variation_type_' + type.id}
-                //   checked={selectedOptions[type.id]?.id === option.id}>
-                //   {option.name}
-                // </div>
-                <input
-                  type="radio"
-                  key={option.id}
-                  className={`join-item btn ${selectedOptions[type.id]?.id === option.id ? 'btn-active' : ''}`}
+                <div
                   onClick={() => chooseOption(type.id, option)}
-                  value={option.id}
-                  name={'variation_type_' + type.id}
-                  checked={selectedOptions[type.id]?.id === option.id}
-                  readOnly
-                />
+                  key={option.id}
+                  className={`join-item btn ${selectedOptions[type.id]?.id === option.id ? 'btn-active' : ''}`}>
+                  {option.name}
+                </div>
               ))}
             </div>}
         </div>

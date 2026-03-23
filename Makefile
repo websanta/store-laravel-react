@@ -34,7 +34,7 @@ install: ## Initial project installation (complete setup)
 	@make setup
 	@make dbuild
 	@make init-project
-	@make up-dev
+	@make dup
 	@echo "$(YELLOW)Waiting for containers to be ready...$(NC)"
 	@sleep 10
 	@make permissions
@@ -66,7 +66,7 @@ setup: ## Setup environment file
 
 dev: ## Start development environment
 	@echo "$(YELLOW)Starting development environment...$(NC)"
-	@make up-dev
+	@make dup
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Development environment started!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
@@ -79,7 +79,7 @@ dev: ## Start development environment
 
 fbuild: ## Build assets for production
 	@echo "$(YELLOW)Building assets for production...$(NC)"
-	rm -rf public/build
+	rm -rf public/build public/hot
 	@docker compose -f $(COMPOSE_FILE) --profile dev up -d node
 	@docker compose -f $(COMPOSE_FILE) exec node npm run build
 	@docker compose -f $(COMPOSE_FILE) stop node
@@ -138,14 +138,14 @@ up: ## Start Docker containers
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
-up-dev: ## Start Docker containers in dev mode
+dup: ## Start Docker containers in dev mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) --profile dev up -d
 	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
-up-prod: ## Start Docker containers in prod mode
+pup: ## Start Docker containers in prod mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) --profile prod up -d
 	@echo "$(GREEN)Containers started!$(NC)"

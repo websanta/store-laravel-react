@@ -1,11 +1,11 @@
-import {React, useState} from 'react';
-import {Link, router, useForm} from '@inertiajs/react';
-import {CartItem as CartItemType} from '@/types';
+import React, { useState } from 'react';
+import { Link, router, useForm } from '@inertiajs/react';
+import { CartItem as CartItemType } from '@/types';
 import CurrencyFormatter from "@/Components/Core/CurrencyFormatter";
 import TextInput from "@/Components/Core/TextInput";
 import { productRoute } from '@/helpers';
 
-function CartItem({item}: {item: CartItemType}) {
+function CartItem({ item }: { item: CartItemType }) {
   const deleteForm = useForm({
     option_ids: item.option_ids
   })
@@ -21,20 +21,20 @@ function CartItem({item}: {item: CartItemType}) {
   // Handle quantity change and immediately update the form
   const handleQuantityChange = (ev:
     React.ChangeEvent<HTMLInputElement>) => {
-      setError('')
-      router.put(route('cart.update', item.product_id), {
-        quantity: ev.target.value,
-        option_ids: item.option_ids
-      }, {
-        preserveScroll: true,
-        onSuccess: () => {
-          setError('')
-        },
-        onError: (errors) => {
-          setError(Object.values(errors)[0])
-        }
-      })
-    };
+    setError('')
+    router.put(route('cart.update', item.product_id), {
+      quantity: ev.target.value,
+      option_ids: item.option_ids
+    }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setError('')
+      },
+      onError: (errors) => {
+        setError(Object.values(errors)[0])
+      }
+    })
+  };
 
   return (
     <>
@@ -67,10 +67,10 @@ function CartItem({item}: {item: CartItemType}) {
               <div className="text-sm">Quantity:</div>
               <div className={error ? 'tooltip tooltip-open tooltip-error' : ''} data-tip={error}>
                 <TextInput type="number"
-                defaultValue={item.quantity}
-                onBlur={handleQuantityChange}
-                className="input-sm w-16"
-                min="1"/>
+                  defaultValue={item.quantity}
+                  onBlur={handleQuantityChange}
+                  className="input-sm w-16"
+                  min="1" />
               </div>
               <button onClick={() => onDeleteClick()}
                 className="btn btn-sm btn-ghost px-4 bg-red-200 hover:bg-red-400 transition-colors duration-200">

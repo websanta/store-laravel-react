@@ -17,6 +17,8 @@ Get the application running locally in under 10 minutes.
 ```bash
 git clone https://github.com/websanta/store-laravel-react store-laravel-react
 cd store-laravel-react
+sudo usermod -aG docker $USER
+newgrp docker
 ```
 
 ---
@@ -79,13 +81,16 @@ echo "127.0.0.1 {your-local-domain}" | sudo tee -a /etc/hosts
 chmod +x scripts/*.sh
 ```
 
----
+### Step 6 — Register on stripe.com
+Create an account in Stripe payment system by visiting https://stripe.com
 
-## Step 6 — Full Install
+## Step 7 — Full Install
 
 ```bash
 make install
 ```
+On step called "Authenticate with Stripe" you will need to follow the provided link (you may need a VPN)
+and log in to your Stripe account. A confirmation code will be sent to your email.
 
 This single command:
 
@@ -108,13 +113,8 @@ This single command:
 
 ---
 
-## Step 7 — Seed Demo Data (optional)
 
-```bash
-make seed
-```
-
-This creates demo departments, categories, users, vendors, and products.
+Demo data: departments, categories, users, vendors, and products.
 
 Demo accounts created by the seeder:
 
@@ -124,16 +124,6 @@ Demo accounts created by the seeder:
 | Vendor | `vendor@example.com` | value of `APP_VENDOR_PASSWORD` in `.env` |
 | Vendor 2 | `avendor@example.com` | value of `APP_VENDOR_PASSWORD` in `.env` |
 | User | `user@example.com` | `password` |
-
----
-
-## Step 8 — Create Filament Admin User
-
-```bash
-make filament-user
-```
-
-Follow the prompts to create your admin panel account.
 
 ---
 

@@ -1,14 +1,29 @@
 .PHONY: help build up down restart logs shell composer artisan npm test clean install setup
 
 # Color output
-YELLOW := \033[0;33m
-GREEN := \033[0;32m
-RED := \033[0;31m
-BLUE := \033[0;34m
-NC := \033[0m # No Color
+# YELLOW := \033
+# GREEN := \033
+# RED := \033
+# BLUE := \033
+# NC := \033
+
+# No Color
+YELLOW :=
+GREEN :=
+RED :=
+BLUE :=
+NC :=
 
 # Docker Compose file path
 COMPOSE_FILE := infrastructure/docker-compose.yml
+
+# Load .env file
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
+SHELL := /bin/bash
 
 help: ## Show this help message
 	@echo '$(YELLOW)Available commands:$(NC)'
@@ -18,29 +33,26 @@ install: ## Initial project installation (complete setup)
 	@echo "$(YELLOW)Starting complete project installation...$(NC)"
 	@make setup
 	@make dbuild
-	@make up
+	@make init-project
+	@make dup
 	@echo "$(YELLOW)Waiting for containers to be ready...$(NC)"
 	@sleep 10
 	@make permissions
 	@make composer-install
-	@make livewire-install
-	@make breeze-install
-	@make filament-install
 	@make npm-install
 	@make key-generate
-	@make pest-install
-	@make migrate
+	@make seed-db
 	@make storage-link
 	@make start-vite
 	@make stripe-setup
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Installation complete!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
-	@echo "  $(BLUE)Application:$(NC) https://vmmint22.local"
-	@echo "  $(BLUE)Admin Panel:$(NC) https://vmmint22.local/admin"
+	@echo "  $(BLUE)Application:$(NC) https:$(APP_URL)"
+	@echo "  $(BLUE)Admin Panel:$(NC) https:$(APP_URL)/admin"
 	@echo "  $(BLUE)Mailpit:$(NC)     http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
-	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
+	@echo "  $(BLUE)Vite Dev:$(NC)    https://localhost:5174"
 	@echo "$(GREEN)============================================$(NC)"
 
 setup: ## Setup environment file
@@ -54,26 +66,25 @@ setup: ## Setup environment file
 
 dev: ## Start development environment
 	@echo "$(YELLOW)Starting development environment...$(NC)"
-	@make up-dev
+	@make dup
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Development environment started!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
-	@echo "  $(BLUE)Application:$(NC) https://vmmint22.local"
-	@echo "  $(BLUE)Admin Panel:$(NC) https://vmmint22.local/admin"
+	@echo "  $(BLUE)Application:$(NC) https:$(APP_URL)"
+	@echo "  $(BLUE)Admin Panel:$(NC) https:$(APP_URL)/admin"
 	@echo "  $(BLUE)Mailpit:$(NC)     http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
-	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
+	@echo "  $(BLUE)Vite Dev:$(NC)    https:$(APP_URL):5174"
 	@echo "$(GREEN)============================================$(NC)"
 
 fbuild: ## Build assets for production
 	@echo "$(YELLOW)Building assets for production...$(NC)"
+	rm -rf public/build public/hot
+	@docker compose -f $(COMPOSE_FILE) --profile dev up -d node
 	@docker compose -f $(COMPOSE_FILE) exec node npm run build
+	@docker compose -f $(COMPOSE_FILE) stop node
 	@echo "$(GREEN)Production build complete!$(NC)"
 	@echo "$(BLUE)Built files are in public/build/$(NC)"
-
-build-watch: ## Build assets with watch mode
-	@echo "$(YELLOW)Building assets in watch mode...$(NC)"
-	@docker compose -f $(COMPOSE_FILE) exec node npm run build -- --watch
 
 build: ## Full production build (composer + npm)
 	@echo "$(YELLOW)Starting full production build...$(NC)"
@@ -89,13 +100,29 @@ build: ## Full production build (composer + npm)
 	@echo "  3. Clear cache: make cache-clear"
 	@echo "$(GREEN)============================================$(NC)"
 
-deploy-prepare: ## Prepare application for deployment
-	@echo "$(YELLOW)Preparing application for deployment...$(NC)"
-	@make cache-clear
-	@make composer-install
-	@make fbuild
-	@make optimize
-	@echo "$(GREEN)Application ready for deployment!$(NC)"
+livewire-install: ## Install Livewire
+	@echo "$(YELLOW)Installing Livewire...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require livewire/livewire
+	docker compose -f $(COMPOSE_FILE) exec store php artisan livewire:publish --assets
+	@echo "$(GREEN)Livewire installed and assets published!$(NC)"
+
+breeze-install: ## Install Laravel Breeze with React and TypeScript
+	@echo "$(YELLOW)Installing Laravel Breeze...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require laravel/breeze --dev
+	docker compose -f $(COMPOSE_FILE) exec store php artisan breeze:install react --typescript
+	docker compose -f $(COMPOSE_FILE) exec node npm install --legacy-peer-deps
+	docker compose -f $(COMPOSE_FILE) exec node npm run build
+	@echo "$(GREEN)Breeze with React and TypeScript installed successfully!$(NC)"
+
+filament-install: ## Install Filament admin panel
+	@echo "$(YELLOW)Installing Filament...$(NC)"
+	docker compose -f $(COMPOSE_FILE) exec store composer require filament/filament:"^3.0"
+	docker compose -f $(COMPOSE_FILE) exec store php artisan filament:install --panels
+	@echo "$(GREEN)Filament installed successfully!$(NC)"
+	@echo "$(BLUE)Create admin user with: make filament-user$(NC)"
+
+filament-user: ## Create Filament admin user
+	@docker compose -f $(COMPOSE_FILE) exec store php artisan make:filament-user
 
 dbuild: ## Build Docker containers
 	@echo "$(YELLOW)Building Docker containers...$(NC)"
@@ -107,19 +134,25 @@ dbuild-quick: ## Build Docker containers (with cache)
 
 up: ## Start Docker containers
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
-	docker compose -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) --profile dev up -d
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
-up-dev: ## Start Docker containers
+up-pgadmin: ## Start PgAdmin Docker container
+	@echo "$(YELLOW)Starting PgAdmin Docker container...$(NC)"
+	docker compose -f $(COMPOSE_FILE) --profile dev start pgadmin
+	@echo "$(GREEN)Container started!$(NC)"
+
+dup: ## Start Docker containers in dev mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) --profile dev up -d
 	@docker compose -f $(COMPOSE_FILE) exec -d node npm run dev
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
-up-prod: ## Start Docker containers
+pup: ## Start Docker containers in prod mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
+	rm -rf public/hot
 	docker compose -f $(COMPOSE_FILE) --profile prod up -d
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
@@ -150,8 +183,11 @@ logs: ## Show container logs (use CONTAINER=name for specific container)
 logs-store: ## Show store container logs
 	@docker compose -f $(COMPOSE_FILE) logs -f store
 
-logs-nginx: ## Show nginx container logs
-	@docker compose -f $(COMPOSE_FILE) logs -f nginx
+logs-nginx-dev: ## Show nginx-dev container logs
+	@docker compose -f $(COMPOSE_FILE) logs -f nginx-dev
+
+logs-nginx-prod: ## Show nginx-prod container logs
+	@docker compose -f $(COMPOSE_FILE) logs -f nginx-prod
 
 logs-node: ## Show node container logs
 	@docker compose -f $(COMPOSE_FILE) logs -f node
@@ -199,12 +235,6 @@ npm-update: ## Update NPM dependencies
 
 npm: ## Run NPM command (use CMD="command" syntax)
 	@docker compose -f $(COMPOSE_FILE) exec node npm $(CMD)
-
-livewire-install: ## Install Livewire
-	@echo "$(YELLOW)Installing Livewire...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require livewire/livewire
-	docker compose -f $(COMPOSE_FILE) exec store php artisan livewire:publish --assets
-	@echo "$(GREEN)Livewire installed and assets published!$(NC)"
 
 start-vite: ## Start Vite dev server
 	@echo "$(YELLOW)Starting Vite dev server...$(NC)"
@@ -272,14 +302,6 @@ optimize: ## Optimize application
 	docker compose -f $(COMPOSE_FILE) exec store php artisan optimize
 	@echo "$(GREEN)Application optimized!$(NC)"
 
-pest-install: ## Install Pest testing framework (Pest 3.x)
-	@echo "$(YELLOW)Installing Pest and Pest Laravel plugin...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require pestphp/pest --dev --with-all-dependencies
-	docker compose -f $(COMPOSE_FILE) exec store composer require pestphp/pest-plugin-laravel --dev
-	@echo "$(YELLOW)Initializing Pest folder structure...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store ./vendor/bin/pest --init
-	@echo "$(GREEN)Pest installed and initialized successfully!$(NC)"
-
 storage-link: ## Create storage symbolic link
 	@echo "$(YELLOW)Creating storage link...$(NC)"
 	docker compose -f $(COMPOSE_FILE) exec store php artisan storage:link
@@ -289,6 +311,18 @@ permissions: ## Fix storage and cache permissions
 	@echo "$(YELLOW)Fixing permissions...$(NC)"
 	@chmod +x scripts/setup-permissions.sh
 	@./scripts/setup-permissions.sh
+	@echo "$(GREEN)Permissions fixed!$(NC)"
+
+init-project: ## Project env and file structure initialisation
+	@echo "$(YELLOW)Project env and file structure initialisation...$(NC)"
+	@chmod +x scripts/init-project.sh
+	@./scripts/init-project.sh
+	@echo "$(GREEN)Project successfully initialized!$(NC)"
+
+seed-db: ## Fresh DB, then Migrate and Seed with demo data
+	@echo "$(YELLOW)Freshing > Migrating > Seeding database with demo data...$(NC)"
+	@chmod +x scripts/seed-database.sh
+	@./scripts/seed-database.sh
 	@echo "$(GREEN)Permissions fixed!$(NC)"
 
 volumes-list: ## List all project volumes
@@ -335,24 +369,6 @@ ps: ## Show running containers
 
 stats: ## Show container resource usage
 	@docker stats --no-stream
-
-breeze-install: ## Install Laravel Breeze with React and TypeScript
-	@echo "$(YELLOW)Installing Laravel Breeze...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require laravel/breeze --dev
-	docker compose -f $(COMPOSE_FILE) exec store php artisan breeze:install react --typescript
-	docker compose -f $(COMPOSE_FILE) exec node npm install --legacy-peer-deps
-	docker compose -f $(COMPOSE_FILE) exec node npm run build
-	@echo "$(GREEN)Breeze with React and TypeScript installed successfully!$(NC)"
-
-filament-install: ## Install Filament admin panel
-	@echo "$(YELLOW)Installing Filament...$(NC)"
-	docker compose -f $(COMPOSE_FILE) exec store composer require filament/filament:"^3.0"
-	docker compose -f $(COMPOSE_FILE) exec store php artisan filament:install --panels
-	@echo "$(GREEN)Filament installed successfully!$(NC)"
-	@echo "$(BLUE)Create admin user with: make filament-user$(NC)"
-
-filament-user: ## Create Filament admin user
-	@docker compose -f $(COMPOSE_FILE) exec store php artisan make:filament-user
 
 xdebug-enable: ## Enable Xdebug
 	@echo "$(YELLOW)Enabling Xdebug...$(NC)"
@@ -403,8 +419,8 @@ info: ## Show system information
 	@docker compose -f $(COMPOSE_FILE) ps
 	@echo ""
 	@echo "$(YELLOW)Access URLs:$(NC)"
-	@echo "  $(BLUE)Application:$(NC)  https://vmmint22.local"
-	@echo "  $(BLUE)Admin Panel:$(NC)  https://vmmint22.local/admin"
+	@echo "  $(BLUE)Application:$(NC)  https:$(APP_URL)"
+	@echo "  $(BLUE)Admin Panel:$(NC)  https:$(APP_URL)/admin"
 	@echo "  $(BLUE)Mailpit UI:$(NC)   http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)      http://localhost:5050"
 	@echo "  $(BLUE)Vite Dev:$(NC)     http://localhost:5174"

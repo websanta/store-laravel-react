@@ -1,24 +1,24 @@
 import { OrderItem } from './index.d';
 export interface User {
-    id: number;
-    name: string;
-    email: string;
-    email_verified_at?: string;
-    // stripa_account_active: boolean;
-    vendor: {
-      status: string;
-      status_label: string;
-      store_name: string;
-      store_address: string;
-      cover_image: string;
-    }
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at?: string;
+  // stripe_account_active: boolean;
+  vendor: {
+    status: string;
+    status_label: string;
+    store_name: string;
+    store_address: string;
+    cover_image: string;
+  }
 }
 
 export type Image = {
-    id: number;
-    thumb: string;
-    small: string;
-    large: string;
+  id: number;
+  thumb: string;
+  small: string;
+  large: string;
 }
 
 export type VariationTypeOption = {
@@ -88,23 +88,24 @@ export type PaginationProps<T> = {
 }
 
 export type PageProps<
-    T extends Record<string, unknown> = Record<string, unknown>,
+  T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
-    appName: string;
-    csrf_token: string;
-    success: {
-      message: string;
-      time: number;
-    };
-    error: string;
-    auth: {
-        user: User;
-    };
-    totalQuantity: number;
-    totalPrice: number;
-    miniCartItems: CartItem[];
-    departments: Department[];
-    keyword: string;
+  appName: string;
+  csrf_token: string;
+  success: {
+    message: string;
+    time: number;
+  };
+  error: string;
+  auth: {
+    user: User;
+  };
+  totalQuantity: number;
+  totalPrice: number;
+  miniCartItems: CartItem[];
+  departments: Department[];
+  keyword: string;
+  from_checkout?: boolean;
 };
 
 export type OrderItem = {
@@ -133,7 +134,7 @@ export type Order = {
     store_name: string;
     store_address: string;
   };
-  OrderItems: OrderItem[]
+  orderItems: OrderItem[]
 }
 
 export type Vendor = {

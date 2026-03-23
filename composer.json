@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.4",
@@ -28,8 +31,6 @@
         "laravel/sail": "1.48.1",
         "mockery/mockery": "1.6.12",
         "nunomaduro/collision": "8.8.3",
-        "pestphp/pest": "3.8.4",
-        "pestphp/pest-plugin-laravel": "3.2.0",
         "phpunit/phpunit": "11.5.33"
     },
     "autoload": {
@@ -91,7 +92,6 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
-            "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }
     },

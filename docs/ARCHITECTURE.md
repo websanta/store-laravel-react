@@ -29,7 +29,7 @@ The application follows a **monolithic app** pattern via InertiaJS: Laravel owns
 │                                   └─── queue (worker)       │
 │                                           (email jobs)      │
 │                                                             │
-│  Dev-only:  pgAdmin · Mailpit · Stripe CLI                  │
+│  Dev-only: Node · pgAdmin · Mailpit · Stripe CLI            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,7 +53,7 @@ The application follows a **monolithic app** pattern via InertiaJS: Laravel owns
 
 ### Production profile
 
-`store`, `nginx`, `node`, `postgres`, `redis`, `queue` — development tooling excluded.
+`store`, `nginx`, `postgres`, `redis`, `queue` — development tooling excluded.
 
 ---
 

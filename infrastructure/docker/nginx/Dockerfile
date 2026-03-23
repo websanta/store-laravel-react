@@ -6,13 +6,6 @@ RUN apk add --no-cache curl
 # Remove default configuration
 RUN rm -rf /etc/nginx/conf.d/*
 
-# Copy custom nginx configurations
-COPY infrastructure/docker/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
-COPY infrastructure/docker/nginx/conf.d/ssl.conf /etc/nginx/conf.d/ssl.conf
-
-# Copy SSL certificates
-COPY infrastructure/docker/nginx/certs /etc/nginx/certs
-
 # Set proper permissions
 RUN chmod 644 /etc/nginx/certs/*.pem 2>/dev/null || true
 

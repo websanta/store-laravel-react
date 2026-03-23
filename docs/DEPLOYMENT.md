@@ -58,6 +58,9 @@ docker --version
 docker compose version
 ```
 
+### Register on stripe.com
+Create an account in Stripe payment system by visiting https://stripe.com
+
 ---
 
 ## 2. Environment Files
@@ -99,7 +102,7 @@ The test environment uses:
 
 ## 3. Docker Setup (dev)
 
-### SSL Certificates
+### SSL Certificates (optional)
 
 ```bash
 mkdir -p infrastructure/docker/nginx/certs

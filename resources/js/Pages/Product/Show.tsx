@@ -1,13 +1,13 @@
-import {Product} from '@/types';
+import { Product } from '@/types';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import CurrencyFormatter from '@/Components/Core/CurrencyFormatter';
 import Carousel from '@/Components/Core/Carousel';
-import {useForm, usePage, router, Head, Link} from '@inertiajs/react';
-import {React, useMemo, useState, useEffect} from 'react';
-import {VariationTypeOption} from '@/types';
-import {arraysAreEqual} from '@/helpers';
+import { useForm, usePage, router, Head, Link } from '@inertiajs/react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { VariationTypeOption } from '@/types';
+import { arraysAreEqual } from '@/helpers';
 
-function Show({product, variationOptions}: {
+function Show({ product, variationOptions }: {
   product: Product,
   variationOptions: number[]
 }) {
@@ -27,10 +27,10 @@ function Show({product, variationOptions}: {
     price: null
   });
 
-  const {url} = usePage();
+  const { url } = usePage();
 
   const [selectedOptions, setSelectedOptions] =
-  useState<Record<number, VariationTypeOption>>([]);
+    useState<Record<number, VariationTypeOption>>([]);
 
   const images = useMemo(() => {
     for (let typeId in selectedOptions) {
@@ -42,15 +42,15 @@ function Show({product, variationOptions}: {
     return product.images;
   }, [product, selectedOptions]);
 
-  const computedProduct = useMemo (() => {
+  const computedProduct = useMemo(() => {
     const selectedOptionIds = Object.values(selectedOptions)
-    .map((op) => op.id)
-    .sort();
+      .map((op) => op.id)
+      .sort();
 
-    for(let variation of product.variations) {
+    for (let variation of product.variations) {
       const optionIds = variation
-      .variation_type_option_ids.sort();
-      if(arraysAreEqual(selectedOptionIds, optionIds)) {
+        .variation_type_option_ids.sort();
+      if (arraysAreEqual(selectedOptionIds, optionIds)) {
         return {
           price: variation.price,
           quantity: variation.quantity === null ? Number.MAX_VALUE : variation.quantity,
@@ -127,25 +127,35 @@ function Show({product, variationOptions}: {
               {type.options.map((option) => (
                 <div onClick={() => chooseOption(type.id, option)} key={option.id}>
                   {option.images &&
-                  <img src={option.images[0].thumb} alt="" className={'w-[50px] ' + (
-                    selectedOptions[type.id]?.id === option.id ? 'outline outline-4 outline-primary' : ''
-                  )}/>}
+                    <img src={option.images[0].thumb} alt="" className={'w-[50px] ' + (
+                      selectedOptions[type.id]?.id === option.id ? 'outline outline-4 outline-primary' : ''
+                    )} />}
                 </div>
               ))}
             </div>}
           {type.type === 'Radio' &&
             <div className="join mt-2 mb-4 w-full">
               {type.options.map(option => (
-                <div
-                onClick={() => chooseOption(type.id, option)}
-                key={option.id}
-                className={`join-item btn ${selectedOptions[type.id]?.id === option.id ? 'btn-active' : ''}`}
-                type="radio"
-                value={option.id}
-                name={'variation_type_' + type.id}
-                checked={selectedOptions[type.id]?.id === option.id}>
-                  {option.name}
-                </div>
+                // <div
+                //   onClick={() => chooseOption(type.id, option)}
+                //   key={option.id}
+                //   className={`join-item btn ${selectedOptions[type.id]?.id === option.id ? 'btn-active' : ''}`}
+                //   type="radio"
+                //   value={option.id}
+                //   name={'variation_type_' + type.id}
+                //   checked={selectedOptions[type.id]?.id === option.id}>
+                //   {option.name}
+                // </div>
+                <input
+                  type="radio"
+                  key={option.id}
+                  className={`join-item btn ${selectedOptions[type.id]?.id === option.id ? 'btn-active' : ''}`}
+                  onClick={() => chooseOption(type.id, option)}
+                  value={option.id}
+                  name={'variation_type_' + type.id}
+                  checked={selectedOptions[type.id]?.id === option.id}
+                  readOnly
+                />
               ))}
             </div>}
         </div>
@@ -157,8 +167,8 @@ function Show({product, variationOptions}: {
     return (
       <div className="flex gap-4 my-4">
         <select value={form.data.quantity}
-        onChange={onQuantityChange}
-        className="select border border-base-300 rounded-md px-4 py-2 bg-base-100 w-full">
+          onChange={onQuantityChange}
+          className="select border border-base-300 rounded-md px-4 py-2 bg-base-100 w-full">
           {Array.from({
             length: Math.min(10, computedProduct.quantity)
           }).map((el, i) => (
@@ -166,8 +176,8 @@ function Show({product, variationOptions}: {
           ))}
         </select>
         <button
-        onClick={addToCart}
-        className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">
+          onClick={addToCart}
+          className="btn btn-primary px-4 bg-black text-white hover:bg-gray-700 transition-colors duration-200">
           Add to Cart
         </button>
       </div>
@@ -177,7 +187,7 @@ function Show({product, variationOptions}: {
   useEffect(() => {
     const idsMap = Object.fromEntries(
       Object.entries(selectedOptions)
-      .map(([typeId, option]: [string, VariationTypeOption]) => [typeId, option.id])
+        .map(([typeId, option]: [string, VariationTypeOption]) => [typeId, option.id])
     )
     // console.log(idsMap)
     form.setData('option_ids', idsMap)
@@ -204,24 +214,24 @@ function Show({product, variationOptions}: {
 
             <div>
               <div className="text-3xl font-semibold mb-4">
-                <CurrencyFormatter amount={computedProduct.price}/>
+                <CurrencyFormatter amount={computedProduct.price} />
               </div>
             </div>
 
             {renderProductVariationTypes()}
 
             {computedProduct.quantity != undefined &&
-            computedProduct.quantity < 10 &&
-            <div className="text-error my-4">
-              <span>Only {computedProduct.quantity} left in stock</span>
-            </div>
+              computedProduct.quantity < 10 &&
+              <div className="text-error my-4">
+                <span>Only {computedProduct.quantity} left in stock</span>
+              </div>
             }
 
             {renderAddToCartButton()}
 
             <b className="text-xl">About this Item</b>
             <div className="wysiwyg-output"
-            dangerouslySetInnerHTML={{__html: product.description}}/>
+              dangerouslySetInnerHTML={{ __html: product.description }} />
           </div>
         </div>
       </div>

@@ -5,7 +5,7 @@ import MiniCartDropdown from './MiniCartDropdown';
 import { PageProps } from "@/types";
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
-const handleLogout = (e) => {
+const handleLogout = (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   router.post(route('logout'));
 };
@@ -14,12 +14,12 @@ export function Navbar() {
   const { auth, departments, totalQuantity, keyword } = usePage().props;
   const { user } = auth;
 
-  const searchForm = useForm <{
+  const searchForm = useForm<{
     keyword: string;
   }>({
     keyword: keyword || '',
   });
-  const {url} = usePage();
+  const { url } = usePage();
 
   const onSubmit: FormEventHandler = (e) => {
     e.preventDefault();
@@ -62,32 +62,33 @@ export function Navbar() {
                 </span>
               </div>
             </div>
-            <MiniCartDropdown/>
+            <MiniCartDropdown />
           </div>
 
           {user &&
             <div className="dropdown dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
-              <div className="w-10 rounded-full">
-                <img
-                  alt="Tailwind CSS Navbar component"
-                  src="/img/profile-icon.webp" />
+              <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
+                <div className="w-10 rounded-full">
+                  <img
+                    alt="Tailwind CSS Navbar component"
+                    src="/img/profile-icon.webp" />
+                </div>
               </div>
+              <ul
+                tabIndex={-1}
+                className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+                <li>
+                  <Link href={route('profile.edit')} className="justify-between">
+                    Profile
+                    <span className="badge">New</span>
+                  </Link>
+                </li>
+                <li>
+                  {/* <a onClick={handleLogout}>Logout</a> */}
+                  <button onClick={handleLogout}>Logout</button>
+                </li>
+              </ul>
             </div>
-            <ul
-              tabIndex="-1"
-              className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
-              <li>
-                <Link href={route('profile.edit')} className="justify-between">
-                  Profile
-                  <span className="badge">New</span>
-                </Link>
-              </li>
-              <li>
-                <a onClick={handleLogout}>Logout</a>
-              </li>
-            </ul>
-          </div>
           }
           {!user && <>
             <Link href={route('login')} className="btn">Login</Link>

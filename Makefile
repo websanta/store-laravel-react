@@ -1,11 +1,13 @@
 .PHONY: help build up down restart logs shell composer artisan npm test clean install setup
 
 # Color output
-# YELLOW := \033[0;33m
-# GREEN := \033[0;32m
-# RED := \033[0;31m
-# BLUE := \033[0;34m
-# NC := \033[0m # No Color
+# YELLOW := \033
+# GREEN := \033
+# RED := \033
+# BLUE := \033
+# NC := \033
+
+# No Color
 YELLOW :=
 GREEN :=
 RED :=
@@ -39,19 +41,18 @@ install: ## Initial project installation (complete setup)
 	@make composer-install
 	@make npm-install
 	@make key-generate
-	@make migrate-fresh-seed
-# 	@make seed-db
+	@make seed-db
 	@make storage-link
 	@make start-vite
 	@make stripe-setup
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Installation complete!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
-	@echo "  $(BLUE)Application:$(NC) https://vmmint22.local"
-	@echo "  $(BLUE)Admin Panel:$(NC) https://vmmint22.local/admin"
+	@echo "  $(BLUE)Application:$(NC) https:$(APP_URL)"
+	@echo "  $(BLUE)Admin Panel:$(NC) https:$(APP_URL)/admin"
 	@echo "  $(BLUE)Mailpit:$(NC)     http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
-	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
+	@echo "  $(BLUE)Vite Dev:$(NC)    https://localhost:5174"
 	@echo "$(GREEN)============================================$(NC)"
 
 setup: ## Setup environment file
@@ -69,16 +70,19 @@ dev: ## Start development environment
 	@echo "$(GREEN)============================================$(NC)"
 	@echo "$(GREEN)Development environment started!$(NC)"
 	@echo "$(YELLOW)Access points:$(NC)"
-	@echo "  $(BLUE)Application:$(NC) https://vmmint22.local"
-	@echo "  $(BLUE)Admin Panel:$(NC) https://vmmint22.local/admin"
+	@echo "  $(BLUE)Application:$(NC) https:$(APP_URL)"
+	@echo "  $(BLUE)Admin Panel:$(NC) https:$(APP_URL)/admin"
 	@echo "  $(BLUE)Mailpit:$(NC)     http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)     http://localhost:5050"
-	@echo "  $(BLUE)Vite Dev:$(NC)    https://vmmint22.local:5174"
+	@echo "  $(BLUE)Vite Dev:$(NC)    https:$(APP_URL):5174"
 	@echo "$(GREEN)============================================$(NC)"
 
 fbuild: ## Build assets for production
 	@echo "$(YELLOW)Building assets for production...$(NC)"
+	rm -rf public/build
+	@docker compose -f $(COMPOSE_FILE) --profile dev up -d node
 	@docker compose -f $(COMPOSE_FILE) exec node npm run build
+	@docker compose -f $(COMPOSE_FILE) stop node
 	@echo "$(GREEN)Production build complete!$(NC)"
 	@echo "$(BLUE)Built files are in public/build/$(NC)"
 
@@ -173,8 +177,11 @@ logs: ## Show container logs (use CONTAINER=name for specific container)
 logs-store: ## Show store container logs
 	@docker compose -f $(COMPOSE_FILE) logs -f store
 
-logs-nginx: ## Show nginx container logs
-	@docker compose -f $(COMPOSE_FILE) logs -f nginx
+logs-nginx-dev: ## Show nginx-dev container logs
+	@docker compose -f $(COMPOSE_FILE) logs -f nginx-dev
+
+logs-nginx-prod: ## Show nginx-prod container logs
+	@docker compose -f $(COMPOSE_FILE) logs -f nginx-prod
 
 logs-node: ## Show node container logs
 	@docker compose -f $(COMPOSE_FILE) logs -f node
@@ -406,8 +413,8 @@ info: ## Show system information
 	@docker compose -f $(COMPOSE_FILE) ps
 	@echo ""
 	@echo "$(YELLOW)Access URLs:$(NC)"
-	@echo "  $(BLUE)Application:$(NC)  https://vmmint22.local"
-	@echo "  $(BLUE)Admin Panel:$(NC)  https://vmmint22.local/admin"
+	@echo "  $(BLUE)Application:$(NC)  https:$(APP_URL)"
+	@echo "  $(BLUE)Admin Panel:$(NC)  https:$(APP_URL)/admin"
 	@echo "  $(BLUE)Mailpit UI:$(NC)   http://localhost:8025"
 	@echo "  $(BLUE)pgAdmin:$(NC)      http://localhost:5050"
 	@echo "  $(BLUE)Vite Dev:$(NC)     http://localhost:5174"

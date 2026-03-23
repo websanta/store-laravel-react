@@ -138,6 +138,11 @@ up: ## Start Docker containers
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps
 
+up-pgadmin: ## Start PgAdmin Docker container
+	@echo "$(YELLOW)Starting PgAdmin Docker container...$(NC)"
+	docker compose -f $(COMPOSE_FILE) --profile dev start pgadmin
+	@echo "$(GREEN)Container started!$(NC)"
+
 dup: ## Start Docker containers in dev mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
 	docker compose -f $(COMPOSE_FILE) --profile dev up -d

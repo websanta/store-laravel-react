@@ -5,7 +5,7 @@ import MiniCartDropdown from './MiniCartDropdown';
 import { PageProps } from "@/types";
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
-const handleLogout = (e: React.MouseEvent<HTMLButtonElement>) => {
+const handleLogout = (e: React.MouseEvent<HTMLElement>) => {
   e.preventDefault();
   router.post(route('logout'));
 };
@@ -84,8 +84,7 @@ export function Navbar() {
                   </Link>
                 </li>
                 <li>
-                  {/* <a onClick={handleLogout}>Logout</a> */}
-                  <button onClick={handleLogout}>Logout</button>
+                  <a onClick={handleLogout}>Logout</a>
                 </li>
               </ul>
             </div>

@@ -8,7 +8,6 @@ function Success({ orders }: PageProps<{ orders: Order[] }>) {
   return (
     <AuthenticatedLayout>
       <Head title="Payment was completed" />
-      {/* <pre>{JSON.stringify(order, undefined, 2)}</pre> */}
       <div className="w-[480px] mx-auto px-4 py-8">
         <div className="flex flex-col gap-2 items-center">
           <div className="text-6xl text-green-600">
@@ -21,7 +20,7 @@ function Success({ orders }: PageProps<{ orders: Order[] }>) {
         <div className="my-6 text-lg">
           Thanks for your purchase! Your payment was successfuly completed.
         </div>
-        {orders.map(order => (
+        {(orders ?? []).map(order => (
           <div key={order.id} className="bg-white rounded-lg p-6 mb-4">
             <h3 className="text-3xl mb-3">Order Summary</h3>
             <div className="flex justify-between mb-2 font-bold">
@@ -47,7 +46,7 @@ function Success({ orders }: PageProps<{ orders: Order[] }>) {
                 Items
               </div>
               <div>
-                {order.OrderItems.length}
+                {(order.orderItems ?? []).length}
               </div>
             </div>
             <div className="flex justify-between mb-3">

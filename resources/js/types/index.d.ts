@@ -4,7 +4,7 @@ export interface User {
   name: string;
   email: string;
   email_verified_at?: string;
-  // stripa_account_active: boolean;
+  // stripe_account_active: boolean;
   vendor: {
     status: string;
     status_label: string;
@@ -134,7 +134,7 @@ export type Order = {
     store_name: string;
     store_address: string;
   };
-  OrderItems: OrderItem[]
+  orderItems: OrderItem[]
 }
 
 export type Vendor = {

@@ -152,6 +152,7 @@ dup: ## Start Docker containers in dev mode
 
 pup: ## Start Docker containers in prod mode
 	@echo "$(YELLOW)Starting Docker containers...$(NC)"
+	rm -rf public/hot
 	docker compose -f $(COMPOSE_FILE) --profile prod up -d
 	@echo "$(GREEN)Containers started!$(NC)"
 	@make ps

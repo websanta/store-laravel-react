@@ -177,6 +177,16 @@ restart: ## Restart Docker containers
 	@make down
 	@make up
 
+drestart: ## Restart Docker containers - development mode
+	@echo "$(YELLOW)Restarting containers - development mode...$(NC)"
+	@make ddown
+	@make dup
+
+prestart: ## Restart Docker containers - production mode
+	@echo "$(YELLOW)Restarting containers - production mode...$(NC)"
+	@make pdown
+	@make pup
+
 logs: ## Show container logs (use CONTAINER=name for specific container)
 	@docker compose -f $(COMPOSE_FILE) logs -f $(CONTAINER)
 
@@ -209,6 +219,9 @@ shell-redis: ## Access node container shell
 
 shell-db: ## Access DB container shell
 	@docker compose -f $(COMPOSE_FILE) exec postgres sh
+
+shell-mailpit: ## Access Mailpit container shell
+	@docker compose -f $(COMPOSE_FILE) exec mailpit sh
 
 composer-install: ## Install Composer dependencies
 	@echo "$(YELLOW)Installing Composer dependencies...$(NC)"
